@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { launch, dialogs, stop, showTools } from "./helpers";
+import { launch, dialogs, stop, showTools, clickAction } from "./helpers";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -49,24 +49,24 @@ test("open, edit, mode switch, undo, save, external conflict and recover", async
     await dialogs(app, filename);
     let page = await app.firstWindow();
     await expect(page.locator(".ProseMirror")).toBeVisible();
-    await page.getByRole("button", { name: "打开", exact: true }).click();
+    await clickAction(page, "打开");
     await expect(page.locator(".ProseMirror h1")).toHaveText("Original");
-    await page.getByRole("button", { name: "源码", exact: true }).click();
+    await clickAction(page, "源码");
     await expect(page.locator(".cm-content")).toBeVisible();
     await page.locator(".cm-content").click();
     await page.keyboard.press(
       (process.platform === "darwin" ? "Meta+" : "Control+") + "End",
     );
     await page.keyboard.type("\n中文 new content");
-    await page.getByRole("button", { name: "保存", exact: true }).click();
+    await clickAction(page, "保存");
     await expect
       .poll(async () => fs.readFile(filename, "utf8"))
       .toContain("中文 new content");
-    await page.getByRole("button", { name: "源码", exact: true }).click();
+    await clickAction(page, "源码");
     await expect(page.locator(".ProseMirror")).toContainText(
       "中文 new content",
     );
-    await page.getByRole("button", { name: "源码", exact: true }).click();
+    await clickAction(page, "源码");
     await expect(page.locator(".cm-content")).toBeVisible();
     await page.locator(".cm-content").click();
     await page.keyboard.press(
@@ -84,7 +84,7 @@ test("open, edit, mode switch, undo, save, external conflict and recover", async
       })
       .toBeGreaterThan(0);
     await fs.writeFile(filename, "EXTERNAL content");
-    await page.getByRole("button", { name: "保存", exact: true }).click();
+    await clickAction(page, "保存");
     await expect(page.getByRole("alert")).toContainText("外部修改");
     expect(await fs.readFile(filename, "utf8")).toBe("EXTERNAL content");
     await stop(app);
@@ -109,16 +109,16 @@ test("unknown Markdown survives source/reading/save with no script execution", a
   try {
     await dialogs(app, filename);
     const page = await app.firstWindow();
-    await page.getByRole("button", { name: "打开", exact: true }).click();
+    await clickAction(page, "打开");
     await expect(page.locator(".cm-content")).toContainText("opaque payload");
-    await page.getByRole("button", { name: "阅读", exact: true }).click();
+    await clickAction(page, "阅读");
     await expect(page.locator(".reading-preview")).toContainText(
       "opaque payload",
     );
     expect(
       await page.evaluate(() => Reflect.get(window, "COMPROMISED")),
     ).toBeUndefined();
-    await page.getByRole("button", { name: "保存", exact: true }).click();
+    await clickAction(page, "保存");
     expect(await fs.readFile(filename, "utf8")).toBe(original);
   } finally {
     await stop(app);
@@ -134,7 +134,7 @@ test("table edits, undo across modes, image archive, theme persistence and porta
   try {
     await dialogs(app, filename);
     let page = await app.firstWindow();
-    await page.getByRole("button", { name: "打开", exact: true }).click();
+    await clickAction(page, "打开");
     await expect(page.locator(".ProseMirror h1")).toHaveText("Advanced");
     await page.locator(".ProseMirror p").click();
     await showTools(page);
@@ -144,10 +144,10 @@ test("table edits, undo across modes, image archive, theme persistence and porta
     await page.locator(".ProseMirror td").first().click();
     await page.getByRole("button", { name: "＋行", exact: true }).click();
     expect(await page.locator(".ProseMirror tr").count()).toBeGreaterThan(rows);
-    await page.getByRole("button", { name: "保存", exact: true }).click();
+    await clickAction(page, "保存");
     await expect.poll(async () => fs.readFile(filename, "utf8")).toContain("|");
     const before = await page.evaluate(() => window.chomy.status());
-    await page.getByRole("button", { name: "源码", exact: true }).click();
+    await clickAction(page, "源码");
     await page.locator(".cm-content").click();
     await page.keyboard.press(
       (process.platform === "darwin" ? "Meta+" : "Control+") + "End",
@@ -177,8 +177,8 @@ test("table edits, undo across modes, image archive, theme persistence and porta
     expect(await fs.readFile(image)).toBeTruthy();
     expect((await fs.readdir(path.join(directory, "assets"))).length).toBe(1);
     await dialogs(app, filename);
-    await page.getByRole("button", { name: "保存", exact: true }).click();
-    await page.getByRole("button", { name: "偏好设置", exact: true }).click();
+    await clickAction(page, "保存");
+    await clickAction(page, "偏好设置");
     await page.getByLabel("主题", { exact: true }).selectOption("chomy-dark");
     await page.getByRole("button", { name: "保存偏好", exact: true }).click();
     await expect(page.locator(".dark-shell")).toBeVisible();
@@ -187,7 +187,7 @@ test("table edits, undo across modes, image archive, theme persistence and porta
     page = await app.firstWindow();
     await expect(page.locator(".dark-shell")).toBeVisible();
     await dialogs(app, filename);
-    await page.getByRole("button", { name: "打开", exact: true }).click();
+    await clickAction(page, "打开");
     const html = path.join(directory, "export.html");
     await dialogs(app, html);
     await app.evaluate(({ BrowserWindow }) =>
@@ -238,11 +238,11 @@ test("code language, math/Mermaid preview and 1 MB source editing", async () => 
   try {
     await dialogs(app, filename);
     const page = await app.firstWindow();
-    await page.getByRole("button", { name: "打开", exact: true }).click();
+    await clickAction(page, "打开");
     await expect(page.getByLabel("代码语言")).toHaveValue("typescript");
     await expect(page.locator(".hljs-keyword")).toBeVisible();
     await page.getByLabel("代码语言").selectOption("python");
-    await page.getByRole("button", { name: "保存", exact: true }).click();
+    await clickAction(page, "保存");
     await expect
       .poll(async () => fs.readFile(filename, "utf8"))
       .toContain("```python");
@@ -252,8 +252,8 @@ test("code language, math/Mermaid preview and 1 MB source editing", async () => 
       "$$E=mc^2$$\n\nInline $x^2$ and `$literal$`.\n\n````text\n$CODE_LITERAL$\n```nested\n$NESTED_LITERAL$\n```\n````\n\n```mermaid\ngraph LR\n A --> B\n```\n",
     );
     await dialogs(app, advanced);
-    await page.getByRole("button", { name: "打开", exact: true }).click();
-    await page.getByRole("button", { name: "阅读", exact: true }).click();
+    await clickAction(page, "打开");
+    await clickAction(page, "阅读");
     await expect(page.locator(".katex")).toHaveCount(2);
     await expect(
       page.locator(".reading-preview code").filter({ hasText: "$literal$" }),
@@ -271,14 +271,14 @@ test("code language, math/Mermaid preview and 1 MB source editing", async () => 
     );
     await dialogs(app, large);
     const start = Date.now();
-    await page.getByRole("button", { name: "打开", exact: true }).click();
+    await clickAction(page, "打开");
     await expect(page.locator(".cm-content")).toBeVisible();
     await page.locator(".cm-content").click();
     await page.keyboard.press(
       (process.platform === "darwin" ? "Meta+" : "Control+") + "End",
     );
     await page.keyboard.insertText("LARGE_EDIT");
-    await page.getByRole("button", { name: "保存", exact: true }).click();
+    await clickAction(page, "保存");
     await expect
       .poll(async () => fs.readFile(large, "utf8"))
       .toContain("LARGE_EDIT");
@@ -329,7 +329,7 @@ test("Java and language aliases highlight, persist, and preserve unknown labels"
   try {
     const page = await app.firstWindow();
     await dialogs(app, filename);
-    await page.getByRole("button", { name: "打开", exact: true }).click();
+    await clickAction(page, "打开");
     const selectors = page.getByLabel("代码语言");
     await expect(selectors).toHaveCount(3);
     await expect(selectors.nth(0)).toHaveValue("Java");
@@ -345,12 +345,12 @@ test("Java and language aliases highlight, persist, and preserve unknown labels"
       "<script>const answer = 42;</script>",
     );
     await selectors.nth(0).selectOption("java");
-    await page.getByRole("button", { name: "保存", exact: true }).click();
+    await clickAction(page, "保存");
     await expect.poll(() => fs.readFile(filename, "utf8")).toContain("```java");
     const saved = await fs.readFile(filename, "utf8");
     expect(saved).toContain("```js");
     expect(saved).toContain("```custom-language");
-    await page.getByRole("button", { name: "阅读", exact: true }).click();
+    await clickAction(page, "阅读");
     const blocks = page.locator(".reading-preview pre code");
     await expect(blocks.nth(0).locator(".hljs-keyword").first()).toHaveText(
       "public",

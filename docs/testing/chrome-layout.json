@@ -1,0 +1,32 @@
+{
+  "window": {
+    "width": 860,
+    "height": 540
+  },
+  "metrics": {
+    ".sidebar": {
+      "x": 0,
+      "y": 0,
+      "width": 320,
+      "height": 540
+    },
+    ".titlebar": {
+      "x": 320,
+      "y": 0,
+      "width": 540,
+      "height": 32
+    },
+    ".ProseMirror": {
+      "x": 350,
+      "y": 72,
+      "width": 480,
+      "height": 400
+    },
+    ".sidebar-empty": {
+      "x": 114.5,
+      "y": 287.5,
+      "width": 90,
+      "height": 21
+    }
+  }
+}

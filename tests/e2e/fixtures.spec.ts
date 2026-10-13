@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import fs from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
-import { launch, dialogs, stop } from "./helpers";
+import { launch, dialogs, stop, clickAction } from "./helpers";
 import { unsupportedReason } from "../../packages/markdown-core/src/policy";
 test("all 12 fixtures survive repeated modes and untouched save byte-for-byte", async () => {
   test.setTimeout(60000);
@@ -21,7 +21,7 @@ test("all 12 fixtures survive repeated modes and untouched save byte-for-byte", 
       const filename = path.join(directory, name);
       await fs.writeFile(filename, original);
       await dialogs(app, filename);
-      await page.getByRole("button", { name: "打开", exact: true }).click();
+      await clickAction(page, "打开");
       await expect
         .poll(
           async () => (await page.evaluate(() => window.chomy.status())).name,
@@ -80,16 +80,16 @@ test("all 12 fixtures survive repeated modes and untouched save byte-for-byte", 
           }));
         const before = await fingerprint();
         for (let cycle = 0; cycle < 3; cycle++) {
-          await page.getByRole("button", { name: "源码", exact: true }).click();
+          await clickAction(page, "源码");
           await expect(page.locator(".cm-content")).toBeVisible();
-          await page.getByRole("button", { name: "源码", exact: true }).click();
+          await clickAction(page, "源码");
           await expect(page.locator(".ProseMirror")).toBeVisible();
           await expect.poll(fingerprint).toEqual(before);
         }
       } else await expect(page.locator(".cm-content")).toBeVisible();
-      await page.getByRole("button", { name: "保存", exact: true }).click();
+      await clickAction(page, "保存");
       await expect(
-        page.getByRole("button", { name: "保存", exact: true }),
+        page.locator(".document-actions button[aria-label=保存]"),
       ).toBeEnabled();
       expect(await fs.readFile(filename)).toEqual(original);
     }
@@ -109,13 +109,13 @@ test("composition events preserve committed CJK text and reject switching mid-co
     await expect(editor).toBeVisible();
     await editor.click();
     await editor.dispatchEvent("compositionstart", { data: "" });
-    await page.getByRole("button", { name: "源码", exact: true }).click();
+    await clickAction(page, "源码");
     await expect(page.getByRole("alert")).toContainText("输入法组合");
     await editor.dispatchEvent("compositionend", { data: "你好" });
     await editor.click();
     await page.keyboard.insertText("你好，世界 👩🏽‍💻");
     await expect(editor).toContainText("你好，世界");
-    await page.getByRole("button", { name: "源码", exact: true }).click();
+    await clickAction(page, "源码");
     await expect(page.locator(".cm-content")).toContainText("你好，世界");
     expect(
       (await page.evaluate(() => window.chomy.status())).markdown.match(
@@ -143,15 +143,14 @@ test("BOM and mixed line endings survive untouched source views and saves", asyn
       );
       await fs.writeFile(filename, original);
       await dialogs(app, filename);
-      await page.getByRole("button", { name: "打开", exact: true }).click();
+      await clickAction(page, "打开");
       await expect
         .poll(
           async () => (await page.evaluate(() => window.chomy.status())).name,
         )
         .toBe(name);
       await expect(page.locator("main")).toHaveAttribute("aria-busy", "false");
-      if (!frontmatter)
-        await page.getByRole("button", { name: "源码", exact: true }).click();
+      if (!frontmatter) await clickAction(page, "源码");
       await expect(page.locator(".cm-content")).toBeVisible();
       await page
         .evaluate(() => window.chomy.status())
@@ -159,17 +158,17 @@ test("BOM and mixed line endings survive untouched source views and saves", asyn
           expect(snapshot.dirty).toBe(false);
           expect(snapshot.markdown).toBe(original.toString("utf8").slice(1));
         });
-      await page.getByRole("button", { name: "保存", exact: true }).click();
+      await clickAction(page, "保存");
       await expect(
-        page.getByRole("button", { name: "保存", exact: true }),
+        page.locator(".document-actions button[aria-label=保存]"),
       ).toBeEnabled();
       expect(await fs.readFile(filename)).toEqual(original);
       if (!frontmatter) {
-        await page.getByRole("button", { name: "源码", exact: true }).click();
+        await clickAction(page, "源码");
         await expect(page.locator(".ProseMirror")).toBeVisible();
-        await page.getByRole("button", { name: "保存", exact: true }).click();
+        await clickAction(page, "保存");
         await expect(
-          page.getByRole("button", { name: "保存", exact: true }),
+          page.locator(".document-actions button[aria-label=保存]"),
         ).toBeEnabled();
         expect(await fs.readFile(filename)).toEqual(original);
       }

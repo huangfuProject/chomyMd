@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Icon } from "./Icon";
 import type { FileEntry } from "@chomy/contracts";
 interface TreeNode {
   name: string;
@@ -98,56 +99,118 @@ export function Sidebar({
   onFolder: () => void;
 }) {
   const [selected, setSelected] = useState(-1);
+  const [searching, setSearching] = useState(false);
+  const [query, setQuery] = useState("");
+  const matches = (text: string) =>
+    text.toLocaleLowerCase().includes(query.toLocaleLowerCase());
   return (
     <aside className="sidebar">
+      <div className="window-controls-space" />
+      <header className="sidebar-header">
+        <details
+          className="sidebar-menu"
+          onClick={(event) => {
+            if ((event.target as Element).closest("button"))
+              event.currentTarget.open = false;
+          }}
+        >
+          <summary aria-label="切换侧栏视图" title="切换侧栏视图">
+            <Icon name="tree" />
+          </summary>
+          <nav className="chrome-popover" aria-label="侧栏视图">
+            {(["outline", "files", "recent"] as const).map((tab) => (
+              <button
+                key={tab}
+                aria-pressed={mode === tab}
+                onClick={() => {
+                  onMode(tab);
+                  setQuery("");
+                }}
+              >
+                {{ outline: "大纲", files: "文件", recent: "最近" }[tab]}
+              </button>
+            ))}
+          </nav>
+        </details>
+        <span>{{ outline: "大纲", files: "文件", recent: "最近" }[mode]}</span>
+        <button
+          aria-label="搜索侧栏"
+          title="搜索"
+          aria-pressed={searching}
+          onClick={() => {
+            setSearching(!searching);
+            setQuery("");
+          }}
+        >
+          <Icon name="search" />
+        </button>
+      </header>
+      {searching && (
+        <div className="sidebar-search">
+          <input
+            autoFocus
+            aria-label="搜索侧栏内容"
+            placeholder="搜索"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                setSearching(false);
+                setQuery("");
+              }
+            }}
+          />
+        </div>
+      )}
       {outline.length >= 1000 && mode === "outline" && (
         <p className="hint">大型文档仅显示前 1000 个标题。</p>
       )}
-      <nav>
-        {(["outline", "files", "recent"] as const).map((tab) => (
-          <button
-            key={tab}
-            aria-pressed={mode === tab}
-            onClick={() => onMode(tab)}
-          >
-            {{ outline: "大纲", files: "文件", recent: "最近" }[tab]}
-          </button>
-        ))}
-      </nav>
-      {mode === "outline" ? (
-        <div className="outline">
-          {outline.length ? (
-            outline.map((heading, index) => (
-              <button
-                key={index}
-                aria-current={selected === index ? "location" : undefined}
-                style={{ paddingLeft: 12 + heading.depth * 10 }}
-                onClick={() => {
-                  setSelected(index);
-                  onHeading(index);
-                }}
-              >
-                {heading.text}
-              </button>
-            ))
-          ) : (
-            <p className="hint">标题将显示在这里</p>
-          )}
-        </div>
-      ) : mode === "files" ? (
-        <>
-          <button onClick={onFolder}>打开文件夹…</button>
-          <FileTree entries={files} onOpen={onOpen} />
-        </>
-      ) : (
-        <div className="file-list">
-          {recent.map((entry) => (
-            <button key={entry.id} onClick={() => onOpen(entry)}>
-              {entry.name}
-            </button>
-          ))}
-        </div>
-      )}
+      <div className="sidebar-content">
+        {mode === "outline" ? (
+          <div className="outline">
+            {outline.some((heading) => matches(heading.text)) ? (
+              outline.map(
+                (heading, index) =>
+                  matches(heading.text) && (
+                    <button
+                      key={index}
+                      aria-current={selected === index ? "location" : undefined}
+                      style={{ paddingLeft: 12 + heading.depth * 10 }}
+                      onClick={() => {
+                        setSelected(index);
+                        onHeading(index);
+                      }}
+                    >
+                      {heading.text}
+                    </button>
+                  ),
+              )
+            ) : (
+              <p className="sidebar-empty">
+                {query ? "未找到匹配内容" : "大纲内容为空"}
+              </p>
+            )}
+          </div>
+        ) : mode === "files" ? (
+          <>
+            <button onClick={onFolder}>打开文件夹…</button>
+            <FileTree
+              entries={files.filter((entry) => matches(entry.relative))}
+              onOpen={onOpen}
+            />
+          </>
+        ) : (
+          <div className="file-list">
+            {recent
+              .filter((entry) => matches(entry.name))
+              .map((entry) => (
+                <button key={entry.id} onClick={() => onOpen(entry)}>
+                  {entry.name}
+                </button>
+              ))}
+          </div>
+        )}
+      </div>
     </aside>
   );
 }

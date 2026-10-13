@@ -23,6 +23,7 @@ try {
     });
   }, filename);
   const page = await app.firstWindow();
+  await page.locator(".document-menu > summary").click();
   await page.getByRole("button", { name: "打开", exact: true }).click();
   await expect(page.locator(".ProseMirror h1")).toHaveText("写作，从这里开始");
   await expect(
@@ -40,6 +41,7 @@ try {
     path: path.join(output, "chomy-table.png"),
     scale: "css",
   });
+  await page.locator(".document-menu > summary").click();
   await page.getByRole("button", { name: "偏好设置", exact: true }).click();
   await page.getByLabel("主题", { exact: true }).selectOption("chomy-dark");
   await page.getByRole("button", { name: "保存偏好", exact: true }).click();
@@ -58,6 +60,7 @@ try {
     },
     path.join(root, "packages/theme-engine/examples/paper"),
   );
+  await page.locator(".document-menu > summary").click();
   await page.getByRole("button", { name: "偏好设置", exact: true }).click();
   await page
     .getByRole("button", { name: "安装主题文件夹", exact: true })

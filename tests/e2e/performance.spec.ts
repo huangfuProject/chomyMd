@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { launch, dialogs, stop } from "./helpers";
+import { launch, dialogs, stop, clickAction } from "./helpers";
 test("records repeatable large-document timings and 10 MB source stress", async () => {
   test.setTimeout(90000);
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "chomy-perf-"));
@@ -31,7 +31,7 @@ test("records repeatable large-document timings and 10 MB source stress", async 
       await fs.writeFile(filename, original);
       const previousId = (await page.evaluate(() => window.chomy.status())).id;
       let start = performance.now();
-      await page.getByRole("button", { name: "打开", exact: true }).click();
+      await clickAction(page, "打开");
       await expect
         .poll(async () => (await page.evaluate(() => window.chomy.status())).id)
         .not.toBe(previousId);
@@ -50,14 +50,14 @@ test("records repeatable large-document timings and 10 MB source stress", async 
       );
       samples.edit?.push(performance.now() - start);
       start = performance.now();
-      await page.getByRole("button", { name: "保存", exact: true }).click();
+      await clickAction(page, "保存");
       await expect
         .poll(
           async () => (await page.evaluate(() => window.chomy.status())).dirty,
         )
         .toBe(false);
       samples.save?.push(performance.now() - start);
-      await page.getByRole("button", { name: "查找", exact: true }).click();
+      await clickAction(page, "查找");
       await page.getByLabel("查找文本").fill("PERFORMANCE_MARKER");
       start = performance.now();
       await page.getByRole("button", { name: "下一个", exact: true }).click();
@@ -80,7 +80,7 @@ test("records repeatable large-document timings and 10 MB source stress", async 
       await fs.writeFile(filename, bytes);
       const previousId = (await page.evaluate(() => window.chomy.status())).id;
       const start = performance.now();
-      await page.getByRole("button", { name: "打开", exact: true }).click();
+      await clickAction(page, "打开");
       await expect
         .poll(async () => (await page.evaluate(() => window.chomy.status())).id)
         .not.toBe(previousId);
@@ -92,7 +92,7 @@ test("records repeatable large-document timings and 10 MB source stress", async 
       await page.locator(".cm-content").click();
       await page.keyboard.press(`${modifier}+End`);
       await page.keyboard.insertText("STRESS_MARKER");
-      await page.getByRole("button", { name: "保存", exact: true }).click();
+      await clickAction(page, "保存");
       await expect
         .poll(async () =>
           (await fs.readFile(filename, "utf8")).includes("STRESS_MARKER"),
@@ -104,13 +104,13 @@ test("records repeatable large-document timings and 10 MB source stress", async 
       filename,
       "# Small\n\n" + "Paragraph text.\n\n".repeat(1000),
     );
-    await page.getByRole("button", { name: "打开", exact: true }).click();
+    await clickAction(page, "打开");
     await expect(page.locator(".ProseMirror")).toBeVisible();
     for (let index = 0; index < 10; index++) {
       const start = performance.now();
-      await page.getByRole("button", { name: "源码", exact: true }).click();
+      await clickAction(page, "源码");
       await expect(page.locator(".cm-content")).toBeVisible();
-      await page.getByRole("button", { name: "源码", exact: true }).click();
+      await clickAction(page, "源码");
       await expect(page.locator(".ProseMirror")).toBeVisible();
       samples.conversion?.push(performance.now() - start);
     }

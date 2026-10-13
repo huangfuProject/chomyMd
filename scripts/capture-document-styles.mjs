@@ -33,6 +33,7 @@ try {
         filePaths: [filename],
       });
     }, filename);
+    await page.locator(".document-menu > summary").click();
     await page.getByRole("button", { name: "打开", exact: true }).click();
     await expect
       .poll(() =>
@@ -69,6 +70,7 @@ try {
   await open(
     path.join(root, "research/typora-1.4/fixtures/layout-reference.md"),
   );
+  await page.locator(".document-menu > summary").click();
   await page.getByRole("button", { name: "阅读", exact: true }).click();
   await expect(page.locator(".reading-preview .math-block")).toHaveCount(2);
   await page.evaluate(() => document.fonts.ready);
@@ -76,6 +78,7 @@ try {
     path: path.join(output, "tables-math-light.png"),
     scale: "device",
   });
+  await page.locator(".document-menu > summary").click();
   await page.getByRole("button", { name: "偏好设置", exact: true }).click();
   await page.getByLabel("主题", { exact: true }).selectOption("chomy-dark");
   await page.getByRole("button", { name: "保存偏好", exact: true }).click();

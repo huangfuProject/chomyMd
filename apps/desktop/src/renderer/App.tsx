@@ -86,6 +86,36 @@ export function App() {
     () => undefined,
   );
   const document = state.document;
+  const wordCount = useMemo(
+    () =>
+      document?.markdown.match(
+        /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]|[\p{L}\p{N}]+/gu,
+      )?.length ?? 0,
+    [document?.markdown],
+  );
+  useEffect(() => {
+    const close = (event: MouseEvent | KeyboardEvent) => {
+      if (event instanceof KeyboardEvent && event.key !== "Escape") return;
+      for (const menu of window.document.querySelectorAll<HTMLDetailsElement>(
+        ".titlebar details[open], .sidebar-header details[open]",
+      )) {
+        if (
+          event instanceof KeyboardEvent ||
+          (event.target instanceof Node && !menu.contains(event.target))
+        ) {
+          menu.open = false;
+          if (event instanceof KeyboardEvent)
+            menu.querySelector<HTMLElement>("summary")?.focus();
+        }
+      }
+    };
+    window.document.addEventListener("click", close);
+    window.document.addEventListener("keydown", close);
+    return () => {
+      window.document.removeEventListener("click", close);
+      window.document.removeEventListener("keydown", close);
+    };
+  }, []);
   useEffect(() => {
     window.document.title = document
       ? `${document.name}${document.dirty ? " •" : ""} — Chomy`
@@ -193,8 +223,36 @@ export function App() {
       }
       return;
     }
+    if (command === "sidebar") {
+      setShowSidebar(!showSidebar);
+      return;
+    }
+    if (command === "reading") {
+      setPreview(!preview);
+      return;
+    }
+    if (command === "tools") {
+      setShowTools(!showTools);
+      return;
+    }
     if (command === "find") {
       setFind(!find);
+      return;
+    }
+    if (
+      ["theme-light", "theme-dark", "theme-system", "theme-contrast"].includes(
+        command,
+      )
+    ) {
+      void run(async () => {
+        if (prefs)
+          setPrefs(
+            await window.chomy.setPreferences({
+              ...prefs,
+              theme: command.replace("theme-", "chomy-"),
+            }),
+          );
+      }, true);
       return;
     }
     if (command === "preferences") {
@@ -435,437 +493,471 @@ export function App() {
     );
   return (
     <div
-      className={`app-shell platform-${platform} ${focus ? "focus-mode" : ""} ${typewriter ? "typewriter-mode" : ""} ${(themes.find((theme) => theme.id === prefs.theme)?.modes.length === 1 && themes.find((theme) => theme.id === prefs.theme)?.modes[0] === "dark") || (themes.find((theme) => theme.id === prefs.theme)?.modes.length === 2 && systemDark) ? "dark-shell" : ""}`}
+      className={`app-shell ${showSidebar ? "with-sidebar" : "without-sidebar"} platform-${platform} ${focus ? "focus-mode" : ""} ${typewriter ? "typewriter-mode" : ""} ${(themes.find((theme) => theme.id === prefs.theme)?.modes.length === 1 && themes.find((theme) => theme.id === prefs.theme)?.modes[0] === "dark") || (themes.find((theme) => theme.id === prefs.theme)?.modes.length === 2 && systemDark) ? "dark-shell" : ""}`}
       onDragOver={(event) => {
         if (event.dataTransfer.types.includes("Files")) event.preventDefault();
       }}
       onDrop={drop}
     >
       <style>{themeCss}</style>
-      <header className="titlebar">
-        <button
-          className="icon-button"
-          onClick={() => setShowSidebar(!showSidebar)}
-          title="侧栏"
-          aria-label="显示或隐藏侧栏"
-        >
-          <Icon name="menu" />
-        </button>
-        <span className="document-title">
-          {document.name}
-          {document.dirty ? " •" : ""}
-        </span>
-        <span className="title-spacer" />
-        <button
-          aria-label="新建"
-          title="新建文档"
-          onClick={() => action("new")}
-          disabled={busy}
-        >
-          <Icon name="new" />
-        </button>
-        <button
-          aria-label="打开"
-          title="打开文档"
-          onClick={() => action("open")}
-          disabled={busy}
-        >
-          <Icon name="open" />
-        </button>
-        <button
-          aria-label="保存"
-          title="保存文档"
-          onClick={() => action("save")}
-          disabled={busy}
-        >
-          <Icon name="save" />
-        </button>
-        <button
-          className="icon-button"
-          aria-label="编辑工具"
-          title="显示或隐藏编辑工具"
-          aria-pressed={showTools}
-          disabled={editorLocked}
-          onClick={() => setShowTools(!showTools)}
-        >
-          <Icon name="tools" />
-        </button>
-        <button
-          className="icon-button"
-          aria-label="偏好设置"
-          onClick={() => setSettings(true)}
-        >
-          <Icon name="settings" />
-        </button>
-        <button
-          disabled={editorLocked}
-          aria-pressed={effectiveSource}
-          onClick={() => action("source")}
-        >
-          源码
-        </button>
-        <button
-          disabled={editorLocked}
-          aria-pressed={preview}
-          onClick={() => setPreview(!preview)}
-        >
-          阅读
-        </button>
-        <button disabled={editorLocked} onClick={() => action("find")}>
-          查找
-        </button>
-      </header>
-      <div
-        className="toolbar"
-        hidden={!showTools && !tableActive}
-        inert={editorLocked}
-        role="toolbar"
-        aria-label="编辑工具"
-      >
-        <div className="primary-tools" hidden={!showTools}>
-          <button
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => action("bold")}
-            title="加粗"
-          >
-            B
-          </button>
-          <button
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => action("italic")}
-            title="斜体"
-          >
-            <i>I</i>
-          </button>
-          <button
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => action("code")}
-          >
-            代码
-          </button>
-          <button
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => action("link")}
-          >
-            链接
-          </button>
-          <button onClick={() => action("image")} disabled={busy}>
-            附件
-          </button>
-          <button
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => action("table")}
-          >
-            表格
-          </button>
-        </div>
-        <div className="table-tools" hidden={!tableActive}>
-          <button
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => action("row")}
-          >
-            ＋行
-          </button>
-          <button
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => action("column")}
-          >
-            ＋列
-          </button>
-          <button
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => action("delete-row")}
-          >
-            －行
-          </button>
-          <button
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => action("delete-column")}
-          >
-            －列
-          </button>
-          <button
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => action("align-left")}
-          >
-            左
-          </button>
-          <button
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => action("align-center")}
-          >
-            中
-          </button>
-          <button
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => action("align-right")}
-          >
-            右
-          </button>
-        </div>
-      </div>
-      {find && (
-        <div className="findbar" inert={editorLocked}>
-          <input
-            aria-label="查找文本"
-            placeholder="查找"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter")
-                editor.current?.find(query, event.shiftKey);
+      {showSidebar && (
+        <Sidebar
+          mode={sidebar}
+          onMode={setSidebar}
+          outline={outline}
+          files={files}
+          recent={data?.recent ?? []}
+          onHeading={(index) => editor.current?.jumpToHeading(index)}
+          onOpen={openEntry}
+          onFolder={() => action("folder")}
+        />
+      )}
+      <div className="editor-column">
+        <header className="titlebar">
+          <details
+            className="document-menu"
+            onClick={(event) => {
+              if ((event.target as Element).closest("button"))
+                event.currentTarget.open = false;
             }}
-          />
-          <input
-            aria-label="替换文本"
-            placeholder="替换为"
-            value={replacement}
-            onChange={(event) => setReplacement(event.target.value)}
-          />
-          <button
-            onClick={() =>
-              setNotice(editor.current?.find(query) ? "" : "未找到匹配")
-            }
           >
-            下一个
-          </button>
-          <button onClick={() => editor.current?.find(query, true)}>
-            上一个
-          </button>
-          <button
-            onClick={() =>
-              setNotice(
-                `已替换 ${editor.current?.replace(query, replacement, false) ?? 0} 项`,
-              )
-            }
-          >
-            替换
-          </button>
-          <button
-            onClick={() =>
-              setNotice(
-                `已替换 ${editor.current?.replace(query, replacement, true) ?? 0} 项`,
-              )
-            }
-          >
-            全部替换
-          </button>
-          <button onClick={() => setFind(false)} aria-label="关闭查找">
-            ×
-          </button>
-        </div>
-      )}
-      {document.externalChange && (
-        <div className="banner warning">
-          文件已被外部修改。保存不会覆盖外部内容。
-          <button
-            onClick={() =>
-              void run(async () => {
-                const live =
-                  editorSessionId.current === state.current.current?.id
-                    ? editor.current?.getMarkdown()
-                    : undefined;
-                if (live !== undefined) state.change(live);
-                await state.flush();
-                state.adopt(await window.chomy.reload());
-              })
-            }
-          >
-            重新加载
-          </button>
-          <button onClick={() => action("saveAs")}>另存副本</button>
-        </div>
-      )}
-      {error && (
-        <div className="banner error" role="alert">
-          {error}
-          {error.includes("上传") && (
+            <summary aria-label="文档菜单" title="文档菜单">
+              <span className="document-title">{document.name}</span>
+              {document.dirty && (
+                <span className="document-state"> — 已编辑</span>
+              )}
+            </summary>
+            <div className="chrome-popover document-actions">
+              <button
+                aria-label="新建"
+                disabled={busy}
+                onClick={() => action("new")}
+              >
+                新建
+              </button>
+              <button
+                aria-label="打开"
+                disabled={busy}
+                onClick={() => action("open")}
+              >
+                打开
+              </button>
+              <button
+                aria-label="保存"
+                disabled={busy}
+                onClick={() => action("save")}
+              >
+                保存
+              </button>
+              <button disabled={busy} onClick={() => action("saveAs")}>
+                另存为…
+              </button>
+              <hr />
+              <button
+                aria-label="编辑工具"
+                aria-pressed={showTools}
+                disabled={editorLocked}
+                onClick={() => setShowTools(!showTools)}
+              >
+                编辑工具
+              </button>
+              <button
+                disabled={editorLocked}
+                aria-pressed={effectiveSource}
+                onClick={() => action("source")}
+              >
+                源码
+              </button>
+              <button
+                disabled={editorLocked}
+                aria-pressed={preview}
+                onClick={() => setPreview(!preview)}
+              >
+                阅读
+              </button>
+              <button disabled={editorLocked} onClick={() => action("find")}>
+                查找
+              </button>
+              <hr />
+              <button aria-label="偏好设置" onClick={() => setSettings(true)}>
+                偏好设置
+              </button>
+            </div>
+          </details>
+          <div className="header-controls">
+            <details className="statistics">
+              <summary aria-label="文档统计" title="文档统计">
+                {wordCount} 词 <Icon name="chevrons" />
+              </summary>
+              <div className="chrome-popover" role="status">
+                <p>
+                  {document.dirty
+                    ? "未保存"
+                    : document.saved
+                      ? "已保存"
+                      : "新文档"}{" "}
+                  · {effectiveSource ? "源码" : "可视编辑"}
+                </p>
+                <p>
+                  {document.markdown.length.toLocaleString()} 字符 ·{" "}
+                  {document.markdown.split(/\r?\n/).length.toLocaleString()} 行
+                </p>
+              </div>
+            </details>
             <button
-              disabled={busy}
+              className="icon-button"
+              aria-label="显示大纲"
+              title="大纲"
+              onClick={() => {
+                setSidebar("outline");
+                setShowSidebar(true);
+              }}
+            >
+              <Icon name="outline" />
+            </button>
+            <button
+              className="icon-button"
+              aria-label="显示或隐藏侧栏"
+              title="侧栏"
+              aria-pressed={showSidebar}
+              onClick={() => setShowSidebar(!showSidebar)}
+            >
+              <Icon name="sidebar" />
+            </button>
+          </div>
+        </header>
+        <div
+          className="toolbar"
+          hidden={!showTools && !tableActive}
+          inert={editorLocked}
+          role="toolbar"
+          aria-label="编辑工具"
+        >
+          <div className="primary-tools" hidden={!showTools}>
+            <button
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => action("bold")}
+              title="加粗"
+            >
+              B
+            </button>
+            <button
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => action("italic")}
+              title="斜体"
+            >
+              <i>I</i>
+            </button>
+            <button
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => action("code")}
+            >
+              代码
+            </button>
+            <button
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => action("link")}
+            >
+              链接
+            </button>
+            <button onClick={() => action("image")} disabled={busy}>
+              附件
+            </button>
+            <button
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => action("table")}
+            >
+              表格
+            </button>
+          </div>
+          <div className="table-tools" hidden={!tableActive}>
+            <button
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => action("row")}
+            >
+              ＋行
+            </button>
+            <button
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => action("column")}
+            >
+              ＋列
+            </button>
+            <button
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => action("delete-row")}
+            >
+              －行
+            </button>
+            <button
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => action("delete-column")}
+            >
+              －列
+            </button>
+            <button
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => action("align-left")}
+            >
+              左
+            </button>
+            <button
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => action("align-center")}
+            >
+              中
+            </button>
+            <button
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => action("align-right")}
+            >
+              右
+            </button>
+          </div>
+        </div>
+        {find && (
+          <div className="findbar" inert={editorLocked}>
+            <input
+              aria-label="查找文本"
+              placeholder="查找"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter")
+                  editor.current?.find(query, event.shiftKey);
+              }}
+            />
+            <input
+              aria-label="替换文本"
+              placeholder="替换为"
+              value={replacement}
+              onChange={(event) => setReplacement(event.target.value)}
+            />
+            <button
+              onClick={() =>
+                setNotice(editor.current?.find(query) ? "" : "未找到匹配")
+              }
+            >
+              下一个
+            </button>
+            <button onClick={() => editor.current?.find(query, true)}>
+              上一个
+            </button>
+            <button
+              onClick={() =>
+                setNotice(
+                  `已替换 ${editor.current?.replace(query, replacement, false) ?? 0} 项`,
+                )
+              }
+            >
+              替换
+            </button>
+            <button
+              onClick={() =>
+                setNotice(
+                  `已替换 ${editor.current?.replace(query, replacement, true) ?? 0} 项`,
+                )
+              }
+            >
+              全部替换
+            </button>
+            <button onClick={() => setFind(false)} aria-label="关闭查找">
+              ×
+            </button>
+          </div>
+        )}
+        {document.externalChange && (
+          <div className="banner warning">
+            文件已被外部修改。保存不会覆盖外部内容。
+            <button
               onClick={() =>
                 void run(async () => {
-                  const value = await window.chomy.retryAsset();
-                  if (value.id !== state.current.current?.id)
-                    throw new Error("附件所属文档已切换，未插入到其他文档。");
-                  editor.current?.insertMarkdown(value.markdown);
+                  const live =
+                    editorSessionId.current === state.current.current?.id
+                      ? editor.current?.getMarkdown()
+                      : undefined;
+                  if (live !== undefined) state.change(live);
+                  await state.flush();
+                  state.adopt(await window.chomy.reload());
                 })
               }
             >
-              重试附件上传
+              重新加载
             </button>
-          )}
-          <button onClick={() => setError("")} aria-label="关闭错误">
-            ×
-          </button>
-        </div>
-      )}
-      {notice && (
-        <div className="banner" role="status">
-          {notice}
-          <button onClick={() => setNotice("")} aria-label="关闭提示">
-            ×
-          </button>
-        </div>
-      )}
-      {busy && (
-        <div className="banner" role="status">
-          {uploadStatus?.state === "uploading" ||
-          uploadStatus?.state === "queued" ? (
-            <>
-              正在上传附件（{Math.ceil(uploadStatus.total / 1024)} KB）…{" "}
-              <progress aria-label="附件上传进度" />
-            </>
-          ) : (
-            "正在处理…"
-          )}
-          {(uploadStatus?.state === "uploading" ||
-            uploadStatus?.state === "queued") && (
-            <button
-              onClick={() =>
-                void window.chomy
-                  .cancelUpload()
-                  .catch((error) => setError(String(error)))
+            <button onClick={() => action("saveAs")}>另存副本</button>
+          </div>
+        )}
+        {error && (
+          <div className="banner error" role="alert">
+            {error}
+            {error.includes("上传") && (
+              <button
+                disabled={busy}
+                onClick={() =>
+                  void run(async () => {
+                    const value = await window.chomy.retryAsset();
+                    if (value.id !== state.current.current?.id)
+                      throw new Error("附件所属文档已切换，未插入到其他文档。");
+                    editor.current?.insertMarkdown(value.markdown);
+                  })
+                }
+              >
+                重试附件上传
+              </button>
+            )}
+            <button onClick={() => setError("")} aria-label="关闭错误">
+              ×
+            </button>
+          </div>
+        )}
+        {notice && (
+          <div className="banner" role="status">
+            {notice}
+            <button onClick={() => setNotice("")} aria-label="关闭提示">
+              ×
+            </button>
+          </div>
+        )}
+        {busy && (
+          <div className="banner" role="status">
+            {uploadStatus?.state === "uploading" ||
+            uploadStatus?.state === "queued" ? (
+              <>
+                正在上传附件（{Math.ceil(uploadStatus.total / 1024)} KB）…{" "}
+                <progress aria-label="附件上传进度" />
+              </>
+            ) : (
+              "正在处理…"
+            )}
+            {(uploadStatus?.state === "uploading" ||
+              uploadStatus?.state === "queued") && (
+              <button
+                onClick={() =>
+                  void window.chomy
+                    .cancelUpload()
+                    .catch((error) => setError(String(error)))
+                }
+              >
+                取消上传
+              </button>
+            )}
+          </div>
+        )}
+        {data && data.recoveries.length > 0 && (
+          <div className="recovery-panel">
+            <strong>发现未保存的恢复内容</strong>
+            {data.recoveries.map((recovery) => (
+              <div key={recovery.id}>
+                <span>
+                  {recovery.name} · {new Date(recovery.date).toLocaleString()}
+                </span>
+                <button
+                  onClick={() =>
+                    void run(async () => {
+                      const live =
+                        editorSessionId.current === state.current.current?.id
+                          ? editor.current?.getMarkdown()
+                          : undefined;
+                      if (live !== undefined) state.change(live);
+                      await state.flush();
+                      state.adopt(await window.chomy.restore(recovery.id));
+                      setData({
+                        ...data,
+                        recoveries: data.recoveries.filter(
+                          (value) => value.id !== recovery.id,
+                        ),
+                      });
+                    })
+                  }
+                >
+                  恢复
+                </button>
+                <button
+                  onClick={() =>
+                    void run(async () => {
+                      await window.chomy.discardRecovery(recovery.id);
+                      setData({
+                        ...data,
+                        recoveries: data.recoveries.filter(
+                          (value) => value.id !== recovery.id,
+                        ),
+                      });
+                    })
+                  }
+                >
+                  丢弃恢复副本
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="workspace">
+          <main
+            className="document-scroll"
+            inert={editorLocked}
+            aria-busy={editorLocked}
+            onMouseUp={(event) => {
+              const target = event.target;
+              const inside =
+                target instanceof Element && target.closest("table") !== null;
+              requestAnimationFrame(() =>
+                setTableActive(
+                  inside || (editor.current?.isInTable() ?? false),
+                ),
+              );
+            }}
+            onKeyUp={() => setTableActive(editor.current?.isInTable() ?? false)}
+            onPasteCapture={(event) => void paste(event)}
+          >
+            <article
+              className="chomy-document"
+              style={
+                {
+                  "--chomy-body-size": prefs.fontSize + "px",
+                  "--chomy-content-max-width": prefs.contentWidth + "px",
+                } as React.CSSProperties
               }
             >
-              取消上传
-            </button>
-          )}
+              {reason && <p className="source-reason">{reason}</p>}
+              <div hidden={preview}>
+                <EditorPane
+                  resetVersion={state.resetVersion}
+                  document={document}
+                  source={effectiveSource}
+                  remote={prefs.remoteImages}
+                  onChange={(value, id) => {
+                    if (id === state.current.current?.id) state.change(value);
+                  }}
+                  onCommand={(command) => actionRef.current(command)}
+                  onReady={(value, id) => {
+                    if (value) {
+                      editor.current = value;
+                      setTableActive(value.isInTable());
+                      editorSessionId.current = id;
+                    } else if (editorSessionId.current === id) {
+                      editor.current = null;
+                      setTableActive(false);
+                      editorSessionId.current = null;
+                    }
+                  }}
+                  onError={(message) => {
+                    setError(message);
+                    setSource(true);
+                  }}
+                />
+              </div>
+              {preview && (
+                <Preview
+                  markdown={document.markdown}
+                  id={document.id}
+                  remote={prefs.remoteImages}
+                  onError={setError}
+                />
+              )}
+            </article>
+          </main>
         </div>
-      )}
-      {data && data.recoveries.length > 0 && (
-        <div className="recovery-panel">
-          <strong>发现未保存的恢复内容</strong>
-          {data.recoveries.map((recovery) => (
-            <div key={recovery.id}>
-              <span>
-                {recovery.name} · {new Date(recovery.date).toLocaleString()}
-              </span>
-              <button
-                onClick={() =>
-                  void run(async () => {
-                    const live =
-                      editorSessionId.current === state.current.current?.id
-                        ? editor.current?.getMarkdown()
-                        : undefined;
-                    if (live !== undefined) state.change(live);
-                    await state.flush();
-                    state.adopt(await window.chomy.restore(recovery.id));
-                    setData({
-                      ...data,
-                      recoveries: data.recoveries.filter(
-                        (value) => value.id !== recovery.id,
-                      ),
-                    });
-                  })
-                }
-              >
-                恢复
-              </button>
-              <button
-                onClick={() =>
-                  void run(async () => {
-                    await window.chomy.discardRecovery(recovery.id);
-                    setData({
-                      ...data,
-                      recoveries: data.recoveries.filter(
-                        (value) => value.id !== recovery.id,
-                      ),
-                    });
-                  })
-                }
-              >
-                丢弃恢复副本
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-      <div className="workspace">
-        {showSidebar && (
-          <Sidebar
-            mode={sidebar}
-            onMode={setSidebar}
-            outline={outline}
-            files={files}
-            recent={data?.recent ?? []}
-            onHeading={(index) => editor.current?.jumpToHeading(index)}
-            onOpen={openEntry}
-            onFolder={() => action("folder")}
-          />
-        )}
-        <main
-          className="document-scroll"
-          inert={editorLocked}
-          aria-busy={editorLocked}
-          onMouseUp={(event) => {
-            const target = event.target;
-            const inside =
-              target instanceof Element && target.closest("table") !== null;
-            requestAnimationFrame(() =>
-              setTableActive(inside || (editor.current?.isInTable() ?? false)),
-            );
-          }}
-          onKeyUp={() => setTableActive(editor.current?.isInTable() ?? false)}
-          onPasteCapture={(event) => void paste(event)}
-        >
-          <article
-            className="chomy-document"
-            style={
-              {
-                "--chomy-body-size": prefs.fontSize + "px",
-                "--chomy-content-max-width": prefs.contentWidth + "px",
-              } as React.CSSProperties
-            }
-          >
-            {reason && <p className="source-reason">{reason}</p>}
-            <div hidden={preview}>
-              <EditorPane
-                resetVersion={state.resetVersion}
-                document={document}
-                source={effectiveSource}
-                remote={prefs.remoteImages}
-                onChange={(value, id) => {
-                  if (id === state.current.current?.id) state.change(value);
-                }}
-                onCommand={(command) => actionRef.current(command)}
-                onReady={(value, id) => {
-                  if (value) {
-                    editor.current = value;
-                    setTableActive(value.isInTable());
-                    editorSessionId.current = id;
-                  } else if (editorSessionId.current === id) {
-                    editor.current = null;
-                    setTableActive(false);
-                    editorSessionId.current = null;
-                  }
-                }}
-                onError={(message) => {
-                  setError(message);
-                  setSource(true);
-                }}
-              />
-            </div>
-            {preview && (
-              <Preview
-                markdown={document.markdown}
-                id={document.id}
-                remote={prefs.remoteImages}
-                onError={setError}
-              />
-            )}
-          </article>
-        </main>
       </div>
-      <footer role="status">
-        <span>
-          {document.dirty ? "未保存" : document.saved ? "已保存" : "新文档"} ·{" "}
-          {effectiveSource ? "源码" : "可视编辑"}
-        </span>
-        <span>
-          {document.markdown.length.toLocaleString()} 字符 ·{" "}
-          {document.markdown.split(/\r?\n/).length.toLocaleString()} 行
-        </span>
-      </footer>
       {settings && (
         <Preferences
           value={prefs}

@@ -36,5 +36,12 @@ export async function stop(app: ElectronApplication) {
 
 export async function showTools(page: Page) {
   if (!(await page.locator(".primary-tools").isVisible()))
-    await page.getByRole("button", { name: "编辑工具", exact: true }).click();
+    await clickAction(page, "编辑工具");
+}
+
+export async function clickAction(page: Page, name: string) {
+  const button = page.getByRole("button", { name, exact: true });
+  if (!(await button.isVisible()))
+    await page.locator(".document-menu > summary").click();
+  await button.click();
 }

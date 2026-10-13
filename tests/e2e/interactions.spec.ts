@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { launch, dialogs, stop, showTools } from "./helpers";
+import { launch, dialogs, stop, showTools, clickAction } from "./helpers";
 const modifier = process.platform === "darwin" ? "Meta" : "Control";
 test("heading and list input rules, table content preservation and source heading commands", async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "chomy-input-"));
@@ -33,7 +33,7 @@ test("heading and list input rules, table content preservation and source headin
     await editor.locator("tr").nth(1).locator("td").nth(1).click();
     await page.getByRole("button", { name: "－列", exact: true }).click();
     await expect(editor.locator("table")).toContainText("KEEP_CELL");
-    await page.getByRole("button", { name: "源码", exact: true }).click();
+    await clickAction(page, "源码");
     await page.locator(".cm-content").click();
     await page.keyboard.press(`${modifier}+Home`);
     await app.evaluate(({ BrowserWindow }) =>
@@ -82,9 +82,9 @@ test("reference attachment displays only after explicit selection and survives r
   try {
     let page = await app.firstWindow();
     await dialogs(app, filename);
-    await page.getByRole("button", { name: "打开", exact: true }).click();
+    await clickAction(page, "打开");
     await expect(page.locator(".ProseMirror h1")).toHaveText("Reference");
-    await page.getByRole("button", { name: "偏好设置", exact: true }).click();
+    await clickAction(page, "偏好设置");
     await page.getByLabel("插入方式").selectOption("reference");
     await page.getByRole("button", { name: "保存偏好", exact: true }).click();
     await page.locator(".ProseMirror p").click();
@@ -99,7 +99,7 @@ test("reference attachment displays only after explicit selection and survives r
       )
       .toBe(1);
     await dialogs(app, filename);
-    await page.getByRole("button", { name: "保存", exact: true }).click();
+    await clickAction(page, "保存");
     await expect
       .poll(async () => fs.readFile(filename, "utf8"))
       .toContain("../");
@@ -108,7 +108,7 @@ test("reference attachment displays only after explicit selection and survives r
     app = await launch(directory);
     page = await app.firstWindow();
     await dialogs(app, filename);
-    await page.getByRole("button", { name: "打开", exact: true }).click();
+    await clickAction(page, "打开");
     await expect
       .poll(async () =>
         page
@@ -153,12 +153,12 @@ test("remote images are offline by default and use the bounded main protocol whe
     });
     const page = await app.firstWindow();
     await dialogs(app, filename);
-    await page.getByRole("button", { name: "打开", exact: true }).click();
+    await clickAction(page, "打开");
     await expect(page.getByRole("img")).toBeVisible();
     expect(
       await app.evaluate(() => Reflect.get(globalThis, "remoteImageRequests")),
     ).toBe(0);
-    await page.getByRole("button", { name: "偏好设置", exact: true }).click();
+    await clickAction(page, "偏好设置");
     await page.getByLabel("加载 HTTPS 远程图片", { exact: false }).check();
     await page.getByRole("button", { name: "保存偏好", exact: true }).click();
     await expect
@@ -196,7 +196,7 @@ test("file switching blocks late input until the new document session is ready",
           ),
         );
     }, filename);
-    await page.getByRole("button", { name: "打开", exact: true }).click();
+    await clickAction(page, "打开");
     await expect(page.locator(".document-scroll")).toHaveAttribute("inert", "");
     await page.keyboard.insertText("LATE_INPUT");
     await expect(page.locator(".ProseMirror")).not.toContainText("LATE_INPUT");
@@ -256,7 +256,7 @@ test("pasting an image into a new document first chooses a Markdown location and
       .toBe(1);
     expect(await fs.readFile(filename, "utf8")).toContain("New document");
     expect(await fs.readdir(path.join(directory, "assets"))).toHaveLength(1);
-    await page.getByRole("button", { name: "保存", exact: true }).click();
+    await clickAction(page, "保存");
     await expect
       .poll(async () => fs.readFile(filename, "utf8"))
       .toContain("./assets/");
@@ -271,7 +271,7 @@ test("installs an independent theme, keeps it after restart and falls back when 
   try {
     let page = await app.firstWindow();
     await dialogs(app, path.resolve("packages/theme-engine/examples/paper"));
-    await page.getByRole("button", { name: "偏好设置", exact: true }).click();
+    await clickAction(page, "偏好设置");
     await page
       .getByRole("button", { name: "安装主题文件夹", exact: true })
       .click();
@@ -297,7 +297,7 @@ test("installs an independent theme, keeps it after restart and falls back when 
       "background-color",
       "rgb(255, 248, 237)",
     );
-    await page.getByRole("button", { name: "偏好设置", exact: true }).click();
+    await clickAction(page, "偏好设置");
     await page
       .getByRole("button", { name: "移除所选主题", exact: true })
       .click();
@@ -328,7 +328,7 @@ test("task checkboxes toggle, undo across modes and persist as Markdown", async 
   try {
     const page = await app.firstWindow();
     await dialogs(app, filename);
-    await page.getByRole("button", { name: "打开", exact: true }).click();
+    await clickAction(page, "打开");
     const task = page.getByRole("checkbox", {
       name: "切换待办：第一项",
       exact: true,
@@ -338,17 +338,17 @@ test("task checkboxes toggle, undo across modes and persist as Markdown", async 
       page.getByRole("checkbox", { name: "切换待办：第二项子项", exact: true }),
     ).toBeChecked();
     await task.check();
-    await page.getByRole("button", { name: "保存", exact: true }).click();
+    await clickAction(page, "保存");
     await expect
       .poll(() => fs.readFile(filename, "utf8"))
       .toContain("[x] 第一项");
-    await page.getByRole("button", { name: "源码", exact: true }).click();
+    await clickAction(page, "源码");
     await page.locator(".cm-content").click();
     await page.keyboard.press(
       (process.platform === "darwin" ? "Meta+" : "Control+") + "z",
     );
     await expect(page.locator(".cm-content")).toContainText("[ ] 第一项");
-    await page.getByRole("button", { name: "源码", exact: true }).click();
+    await clickAction(page, "源码");
     await expect(task).not.toBeChecked();
     await expect(page.getByRole("checkbox")).toHaveCount(3);
   } finally {
@@ -367,7 +367,7 @@ test("Down exits the last code line into a paragraph and preserves the code", as
   try {
     const page = await app.firstWindow();
     await dialogs(app, filename);
-    await page.getByRole("button", { name: "打开", exact: true }).click();
+    await clickAction(page, "打开");
     const editor = page.locator(".ProseMirror");
     const code = editor.locator(".code-block code");
     await expect(code).toHaveText("first();\nlast();");
@@ -390,7 +390,7 @@ test("Down exits the last code line into a paragraph and preserves the code", as
     await page.keyboard.type("Outside code");
     await expect(editor.locator("p").last()).toHaveText("Outside code");
     await expect(code).toHaveText("first();\nlast();");
-    await page.getByRole("button", { name: "保存", exact: true }).click();
+    await clickAction(page, "保存");
     await expect
       .poll(() => fs.readFile(filename, "utf8"))
       .toContain("```java\nfirst();\nlast();\n```\n\nOutside code");
@@ -411,7 +411,7 @@ test("CJK emphasis renders, accepts typed markers and survives source/save/readi
   try {
     const page = await app.firstWindow();
     await dialogs(app, filename);
-    await page.getByRole("button", { name: "打开", exact: true }).click();
+    await clickAction(page, "打开");
     const editor = page.locator(".ProseMirror");
     await expect(editor.locator("em")).toHaveText(["你好", "Hello"]);
     const emphasis = editor.locator("em").first();
@@ -431,11 +431,11 @@ test("CJK emphasis renders, accepts typed markers and survives source/save/readi
     await expect(editor.locator("em").last()).toHaveText("中文");
     await page.keyboard.type(" plain");
     await expect(editor.locator("em").last()).toHaveText("中文");
-    await page.getByRole("button", { name: "源码", exact: true }).click();
+    await clickAction(page, "源码");
     await expect(page.locator(".cm-content")).toContainText("*中文*");
-    await page.getByRole("button", { name: "保存", exact: true }).click();
+    await clickAction(page, "保存");
     await expect.poll(() => fs.readFile(filename, "utf8")).toContain("*中文*");
-    await page.getByRole("button", { name: "阅读", exact: true }).click();
+    await clickAction(page, "阅读");
     await expect(page.locator(".reading-preview em")).toHaveText([
       "你好",
       "Hello",
@@ -486,7 +486,7 @@ test("bulk and IME emphasis commits do not serialize as escaped asterisks", asyn
   try {
     const page = await app.firstWindow();
     await dialogs(app, filename);
-    await page.getByRole("button", { name: "打开", exact: true }).click();
+    await clickAction(page, "打开");
     const editor = page.locator(".ProseMirror");
     await expect(editor.locator("p")).toHaveText("Start");
     await editor.click();
@@ -502,7 +502,7 @@ test("bulk and IME emphasis commits do not serialize as escaped asterisks", asyn
     await page.keyboard.press("Enter");
     await page.keyboard.insertText("\\*字面星号\\*");
     await expect(editor.locator("em")).toHaveCount(2);
-    await page.getByRole("button", { name: "保存", exact: true }).click();
+    await clickAction(page, "保存");
     await expect
       .poll(() => fs.readFile(filename, "utf8"))
       .toContain("*输入法*");
@@ -511,9 +511,9 @@ test("bulk and IME emphasis commits do not serialize as escaped asterisks", asyn
     expect(saved).toContain("*输入法*");
     expect(saved).not.toContain("\\*你好\\*");
     expect(saved).not.toContain("\\*输入法\\*");
-    await page.getByRole("button", { name: "源码", exact: true }).click();
+    await clickAction(page, "源码");
     await expect(page.locator(".cm-content")).toContainText("*你好*");
-    await page.getByRole("button", { name: "阅读", exact: true }).click();
+    await clickAction(page, "阅读");
     await expect(page.locator(".reading-preview em")).toHaveText([
       "你好",
       "输入法",
@@ -534,7 +534,7 @@ test("character input and IME confirmation by Space/Enter keep unescaped emphasi
   try {
     const page = await app.firstWindow();
     await dialogs(app, filename);
-    await page.getByRole("button", { name: "打开", exact: true }).click();
+    await clickAction(page, "打开");
     const editor = page.locator(".ProseMirror");
     for (const mode of [
       "characters",
@@ -561,7 +561,7 @@ test("character input and IME confirmation by Space/Enter keep unescaped emphasi
       await expect(editor.locator("em")).toHaveText("asdasdasdas");
       await page.keyboard.type(" AFTER");
       await expect(editor.locator("em")).toHaveText("asdasdasdas");
-      await page.getByRole("button", { name: "保存", exact: true }).click();
+      await clickAction(page, "保存");
       await expect.poll(() => fs.readFile(filename, "utf8")).toContain("AFTER");
       const saved = await fs.readFile(filename, "utf8");
       expect(saved).toContain("*asdasdasdas*");

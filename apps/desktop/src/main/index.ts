@@ -78,7 +78,10 @@ async function createWindow() {
     minHeight: 480,
     title: "Chomy",
     icon: path.join(__dirname, "../assets/icon.png"),
-    titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "default",
+    titleBarStyle: process.platform === "darwin" ? "hidden" : "default",
+    ...(process.platform === "darwin"
+      ? { trafficLightPosition: { x: 12, y: 10 } }
+      : {}),
     show: false,
     backgroundColor: "#ffffff",
     webPreferences: {

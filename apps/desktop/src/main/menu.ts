@@ -92,6 +92,7 @@ export function installMenu(send: (command: AppCommand) => void) {
         submenu: [
           command("加粗", "CmdOrCtrl+B", "bold"),
           command("斜体", "CmdOrCtrl+I", "italic"),
+          command("行内代码", undefined, "code"),
           command("超链接", "CmdOrCtrl+K", "link"),
           command("图片与附件…", "CmdOrCtrl+Shift+I", "image"),
         ],
@@ -99,6 +100,9 @@ export function installMenu(send: (command: AppCommand) => void) {
       {
         label: "显示",
         submenu: [
+          command("显示或隐藏侧栏", "CmdOrCtrl+Shift+L", "sidebar"),
+          command("阅读模式", undefined, "reading"),
+          command("编辑工具", undefined, "tools"),
           command("源码模式", "CmdOrCtrl+/", "source"),
           command("专注模式", "CmdOrCtrl+Shift+F", "focus"),
           command("打字机模式", undefined, "typewriter"),
@@ -117,7 +121,19 @@ export function installMenu(send: (command: AppCommand) => void) {
             },
           ]
         : []),
-      { role: "windowMenu" },
+      {
+        label: "主题",
+        submenu: [
+          command("明亮", undefined, "theme-light"),
+          command("暗色", undefined, "theme-dark"),
+          command("跟随系统", undefined, "theme-system"),
+          command("高对比度", undefined, "theme-contrast"),
+          { type: "separator" },
+          command("选择与管理主题…", undefined, "preferences"),
+        ],
+      },
+      { label: "窗口", role: "windowMenu" },
+      { label: "帮助", submenu: [{ label: "关于 Chomy", role: "about" }] },
     ]),
   );
 }

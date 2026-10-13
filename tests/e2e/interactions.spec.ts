@@ -399,3 +399,79 @@ test("Down exits the last code line into a paragraph and preserves the code", as
     await fs.rm(directory, { recursive: true, force: true });
   }
 });
+
+test("CJK emphasis renders, accepts typed markers and survives source/save/reading", async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "chomy-emphasis-"));
+  const filename = path.join(directory, "emphasis.md");
+  await fs.writeFile(
+    filename,
+    "*你好* 与 *Hello*。\n\n`*你好*`\n\n\\*你好\\*\n\n输入：\n",
+  );
+  const app = await launch(directory);
+  try {
+    const page = await app.firstWindow();
+    await dialogs(app, filename);
+    await page.getByRole("button", { name: "打开", exact: true }).click();
+    const editor = page.locator(".ProseMirror");
+    await expect(editor.locator("em")).toHaveText(["你好", "Hello"]);
+    const emphasis = editor.locator("em").first();
+    await expect(emphasis).toHaveCSS("font-style", "italic");
+    await expect
+      .poll(() =>
+        emphasis.evaluate((el) => getComputedStyle(el).fontSynthesisStyle),
+      )
+      .toBe("auto");
+    await expect(editor.locator("code")).toHaveText("*你好*");
+    await expect(editor.locator("p").nth(2)).toHaveText("*你好*");
+    await editor.locator("p").last().click();
+    await page.keyboard.press("End");
+    await page.keyboard.type("*");
+    await page.keyboard.insertText("中文");
+    await page.keyboard.type("*");
+    await expect(editor.locator("em").last()).toHaveText("中文");
+    await page.keyboard.type(" plain");
+    await expect(editor.locator("em").last()).toHaveText("中文");
+    await page.getByRole("button", { name: "源码", exact: true }).click();
+    await expect(page.locator(".cm-content")).toContainText("*中文*");
+    await page.getByRole("button", { name: "保存", exact: true }).click();
+    await expect.poll(() => fs.readFile(filename, "utf8")).toContain("*中文*");
+    await page.getByRole("button", { name: "阅读", exact: true }).click();
+    await expect(page.locator(".reading-preview em")).toHaveText([
+      "你好",
+      "Hello",
+      "中文",
+    ]);
+    await expect
+      .poll(() =>
+        page
+          .locator(".reading-preview em")
+          .first()
+          .evaluate((el) => getComputedStyle(el).fontSynthesisStyle),
+      )
+      .toBe("auto");
+    await expect(page.locator(".reading-preview code")).toHaveText("*你好*");
+    const html = path.join(directory, "emphasis.html");
+    await dialogs(app, html);
+    await app.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()[0]?.webContents.send(
+        "chomy:v1:command",
+        "export-html",
+      ),
+    );
+    await expect
+      .poll(async () => {
+        try {
+          return await fs.readFile(html, "utf8");
+        } catch {
+          return "";
+        }
+      })
+      .toContain("<em>你好</em>");
+    expect(await fs.readFile(html, "utf8")).toContain(
+      "font-synthesis: weight style",
+    );
+  } finally {
+    await stop(app);
+    await fs.rm(directory, { recursive: true, force: true });
+  }
+});

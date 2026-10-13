@@ -615,6 +615,7 @@ footer {
   --chomy-math-size: 1.1em;
   --chomy-math-number-display: block;
   --chomy-selection-bg: rgba(64, 120, 170, 0.16);
+  font-synthesis: weight style;
   font-family: var(--chomy-font-body);
   line-height: var(--chomy-body-line-height);
 }

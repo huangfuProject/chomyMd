@@ -1,8 +1,14 @@
-# Chomy 1.0.4 版本验证记录
+# Chomy 1.0.5 版本验证记录
 
 日期：2026-10-13。验证主机：macOS 26.5.2、Apple M1 Max、arm64。产物为未签名内部测试包。
 
 ## 本轮改动
+
+- 修复中文斜体显示：Markdown原本已生成em，但全局font-synthesis:none禁止缺失字形的合成，导致默认中文字体显示为正体。正文覆盖为weight style后，中文可见倾斜，Latin继续使用原生斜体。
+- 新增中文闭合星号输入、源码切换与保存、阅读及HTML导出回归；代码与转义星号仍是普通文本。
+- [修复前](../testing/screenshots/emphasis-before.png)与[修复后](../testing/screenshots/emphasis-after.png)截图确认中文字形变化。
+
+以下为延续的1.0.4改动：
 
 - 应用图标改为单个黑色衬线C、白色圆角方形底板与透明四角，去除旧chomy横向字标。
 - 同步PNG、ICNS（16–1024px）及ICO（16/32/48/64/128/256px）；主文件1254px、运行PNG1024px、32px预览的四角alpha均实测为0。32px字母可辨。
@@ -29,16 +35,18 @@
 | ------------------- | --------------------------------------------------------------------------- |
 | pnpm check          | lint、严格类型、35项单元测试、格式检查通过                                  |
 | pnpm make           | Mac APP、ZIP、DMG成功，hdiutil verify通过                                   |
-| pnpm test:installed | 从只读DMG复制、移走原构建后，全部18项E2E通过，40.5秒                        |
+| pnpm test:installed | 从只读DMG复制、移走原构建后，全部19项E2E通过，44.7秒                        |
 | 表格视觉            | 单行38.59 CSS px；960px表格列宽约217/526/217px；浅色/深色及可视编辑截图检查 |
 | Windows跨平台打包   | 便携ZIP生成；不等同Windows安装器或Windows10/11实机验收                      |
 | 完整性              | artifact-manifest.json记录7个关键文件的SHA-256                              |
 
-18项E2E包含12类Markdown的字节保真、BOM和混合换行、组合输入保护、表格编辑与撤销、代码、数学/Mermaid、导出、主题安装重启、附件授权、文件冲突与恢复、大文件。原生输入法此前记录见[native-acceptance.md](../testing/native-acceptance.md)，本轮不宣称重新进行了系统IME验收。
+19项E2E包含12类Markdown的字节保真、BOM和混合换行、组合输入保护、表格编辑与撤销、代码、数学/Mermaid、导出、主题安装重启、附件授权、文件冲突与恢复、大文件。原生输入法此前记录见[native-acceptance.md](../testing/native-acceptance.md)，本轮不宣称重新进行了系统IME验收。
 
-上一版1.0.2的GitHub[运行记录](https://github.com/huangfuProject/chomyMd/actions/runs/38333482027)中，Mac和Windows全部检查及打包测试通过，Mac安装后回归通过。1.0.4的CI以Actions页面新运行结果为准。
+上一版1.0.4的GitHub[运行记录](https://github.com/huangfuProject/chomyMd/actions/runs/38403651769)中，Mac和Windows全部检查及打包测试通过，Mac安装后回归通过。1.0.5的CI以Actions页面新运行结果为准。
 
 1.0.3开发目录首次全量运行有一个HTML导出失败，当时并行打包重建了正在使用的dist目录。停止并行重建后，以稳定的DMG安装副本完整重跑18项全部通过；后续验证与构建按依赖顺序执行，避免影响运行资源。
+
+1.0.5首次开发目录运行与截图捕获窗口并行，↓键回归未通过；之后不并行启动其他窗口，DMG安装副本19项全部通过。键盘回归与视觉捕获须串行执行，以免窗口焦点影响输入。
 
 ## 性能样本
 
@@ -46,11 +54,11 @@
 
 | 操作       | P50 / ms | P95 / ms |
 | ---------- | -------: | -------: |
-| 打开       |    106.8 |    301.1 |
-| 编辑       |     36.0 |    163.1 |
-| 保存       |    237.3 |    254.5 |
-| 搜索       |     94.3 |    133.8 |
-| conversion |     75.6 |    120.9 |
+| 打开       |    107.3 |    298.4 |
+| 编辑       |     34.9 |     50.0 |
+| 保存       |    237.3 |    270.5 |
+| 搜索       |     94.1 |    101.6 |
+| conversion |     75.8 |    113.8 |
 
 完整样本：[performance-results.json](../testing/performance-results.json)。
 

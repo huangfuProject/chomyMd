@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "example.paper",
+  "name": "Paper Example",
+  "version": "1.0.0",
+  "engine": ">=1.0.0",
+  "author": "Chomy",
+  "modes": ["light"],
+  "styles": "theme.css",
+  "description": "独立原创的暖纸色主题示例；字号和正文宽度仍由用户偏好覆盖。",
+  "preview": "preview.png"
+}

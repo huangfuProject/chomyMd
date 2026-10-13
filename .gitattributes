@@ -1,0 +1,10 @@
+* text=auto eol=lf
+
+# Preserve golden documents and original third-party license text byte-for-byte.
+packages/test-fixtures/markdown/** -text -whitespace
+research/typora-1.4/fixtures/** -text -whitespace
+apps/desktop/assets/THIRD_PARTY_NOTICES.txt -text -whitespace
+
+*.png binary
+*.icns binary
+*.ico binary

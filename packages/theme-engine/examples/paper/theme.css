@@ -1,0 +1,15 @@
+:root {
+  --chomy-bg: #fff8ed;
+  --chomy-fg: #352b25;
+  --chomy-code-bg: #f0e6d7;
+  --chomy-link-color: #765226;
+  --chomy-border: #d3c3aa;
+}
+h1,
+h2 {
+  border-bottom: 1px solid var(--chomy-border);
+  padding-bottom: 0.2em;
+}
+blockquote {
+  border-left-width: 4px;
+}

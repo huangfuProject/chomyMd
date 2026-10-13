@@ -1,0 +1,39 @@
+# Dependencies, build products, and local verification output
+node_modules/
+**/dist/
+**/out/
+test-results/
+playwright-report/
+coverage/
+.DS_Store
+*.log
+*.tmp
+
+# Local secrets and application data
+.env*
+!.env.example
+*.p12
+*.pfx
+*.key
+**/cloud-credentials.bin
+**/asset-grants.json
+.test-data/
+user-data/
+
+# Local tool configuration and original specification
+.codex/
+.agents/
+.claude/
+.cursor/
+.windsurf/
+.aider*
+.mcp.json
+**/AGENTS.md
+CLAUDE.md
+GEMINI.md
+Chomy-Codex-Development-Guide.md
+
+# Local working reports; public technical documentation remains tracked
+docs/release/current-report.md
+docs/release/phase-0-1-report.md
+research/typora-1.4/observed-*.txt

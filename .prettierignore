@@ -1,0 +1,11 @@
+pnpm-lock.yaml
+Chomy-Codex-Development-Guide.md
+node_modules
+dist
+out
+test-results
+playwright-report
+research/typora-1.4/observed-*.txt
+packages/test-fixtures/markdown/
+
+research/typora-1.4/fixtures/

@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@chomy/contracts": ["packages/contracts/src/index.ts"],
+      "@chomy/document-core": ["packages/document-core/src/index.ts"],
+      "@chomy/editor-core": ["packages/editor-core/src/index.ts"],
+      "@chomy/markdown-core": ["packages/markdown-core/src/index.ts"],
+      "@chomy/theme-engine": ["packages/theme-engine/src/index.ts"],
+      "@chomy/storage-core": ["packages/storage-core/src/index.ts"]
+    }
+  }
+}

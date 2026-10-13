@@ -1,0 +1,10 @@
+{
+  "name": "@chomy/markdown-core",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "dependencies": {
+    "marked": "18.1.1"
+  }
+}

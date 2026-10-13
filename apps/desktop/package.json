@@ -1,0 +1,53 @@
+{
+  "name": "@chomy/desktop",
+  "productName": "Chomy",
+  "version": "1.0.0",
+  "description": "Local-first Markdown editor for macOS arm64 and Windows x64",
+  "private": true,
+  "author": "Chomy contributors",
+  "main": "dist/main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "package": "electron-forge package",
+    "make": "electron-forge make"
+  },
+  "config": {
+    "forge": "./forge.config.cjs"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-s3": "3.1149.0",
+    "@chomy/contracts": "workspace:*",
+    "@codemirror/commands": "6.11.1",
+    "@codemirror/lang-markdown": "6.5.2",
+    "@codemirror/language": "6.13.1",
+    "@codemirror/search": "6.7.2",
+    "@codemirror/state": "6.7.6",
+    "@codemirror/view": "6.43.14",
+    "@electron-forge/cli": "8.0.1",
+    "@electron-forge/maker-squirrel": "8.0.1",
+    "@electron-forge/maker-zip": "8.0.1",
+    "@milkdown/kit": "7.22.3",
+    "@types/ali-oss": "6.23.3",
+    "@types/css-tree": "3.2.0",
+    "@types/electron-squirrel-startup": "1.0.2",
+    "@types/katex": "0.16.8",
+    "adm-zip": "0.6.1",
+    "ali-oss": "6.23.0",
+    "css-tree": "3.2.1",
+    "dompurify": "3.4.17",
+    "electron": "44.7.0",
+    "electron-squirrel-startup": "1.0.1",
+    "highlight.js": "11.12.0",
+    "katex": "0.19.0",
+    "marked": "18.1.1",
+    "mermaid": "12.1.0",
+    "proxy-agent": "5.0.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "@chomy/document-core": "workspace:*",
+    "@chomy/editor-core": "workspace:*",
+    "@chomy/markdown-core": "workspace:*",
+    "@chomy/theme-engine": "workspace:*",
+    "@chomy/storage-core": "workspace:*"
+  }
+}

@@ -152,7 +152,7 @@ input[type="range"] {
   --chomy-body-size: 16px;
   --chomy-content-max-width: 800px;
   --chomy-code-bg: #f5f5f6;
-  --chomy-border: #ddd;
+  --chomy-border: #dfe2e5;
   --chomy-link-color: #4078aa;
   color: var(--chomy-fg);
   background: var(--chomy-bg);
@@ -171,14 +171,14 @@ input[type="range"] {
   border-bottom: 1px solid var(--chomy-border);
   margin: 1.2em 0 0.5em;
   padding-bottom: 0.25em;
-  font-size: 2em;
+  font-size: 2.25em;
   line-height: 1.2;
 }
 .chomy-document h2 {
   border-bottom: 1px solid var(--chomy-border);
   margin: 1.2em 0 0.5em;
   padding-bottom: 0.2em;
-  font-size: 1.6em;
+  font-size: 1.75em;
 }
 .chomy-document h3 {
   font-size: 1.3em;
@@ -220,18 +220,22 @@ input[type="range"] {
 }
 .chomy-document table {
   border-collapse: collapse;
+  table-layout: auto;
   width: 100%;
   margin: 1em 0;
 }
 .chomy-document th,
 .chomy-document td {
-  border: 1px solid var(--chomy-border);
+  border: 1px solid var(--chomy-table-border, var(--chomy-border));
   min-width: 50px;
-  padding: 7px 12px;
+  padding: var(--chomy-table-cell-padding, 6px 13px);
+  line-height: 1.6;
+  vertical-align: middle;
 }
 .chomy-document th {
-  background: var(--chomy-code-bg);
-  font-weight: 600;
+  background: var(--chomy-table-header-bg);
+  font-weight: 700;
+  text-align: left;
 }
 .chomy-document img {
   max-width: 100%;
@@ -603,10 +607,13 @@ footer {
   --chomy-content-max-width: 960px;
   --chomy-font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --chomy-font-mono: ui-monospace, SFMono-Regular, Consolas, monospace;
-  --chomy-body-line-height: 1.7;
+  --chomy-body-line-height: 1.6;
   --chomy-heading-color: var(--chomy-fg);
   --chomy-quote-color: #777;
   --chomy-table-alt-bg: #f8f8f8;
+  --chomy-table-header-bg: var(--chomy-table-alt-bg);
+  --chomy-math-size: 1.1em;
+  --chomy-math-number-display: block;
   --chomy-selection-bg: rgba(64, 120, 170, 0.16);
   font-family: var(--chomy-font-body);
   line-height: var(--chomy-body-line-height);
@@ -630,10 +637,73 @@ footer {
   font-family: var(--chomy-font-mono);
 }
 .chomy-document th {
-  background: var(--chomy-bg);
+  background: var(--chomy-table-header-bg);
 }
-.chomy-document tbody tr:nth-child(even) td {
+.chomy-document table:not(:has(thead)) tbody tr:nth-child(odd) td,
+.chomy-document table:has(thead) tbody tr:nth-child(even) td {
   background: var(--chomy-table-alt-bg);
+}
+.chomy-document [align="left"] {
+  text-align: left;
+}
+.chomy-document [align="center"] {
+  text-align: center;
+}
+.chomy-document [align="right"] {
+  text-align: right;
+}
+.chomy-document th p,
+.chomy-document td p {
+  margin: 0;
+}
+.chomy-document .ProseMirror th,
+.chomy-document .ProseMirror td {
+  vertical-align: middle;
+}
+.chomy-document .ProseMirror table {
+  table-layout: auto;
+}
+.chomy-document .ProseMirror table:has([data-colwidth]) {
+  table-layout: fixed;
+}
+.chomy-document .ProseMirror .selectedCell::after {
+  background: var(--chomy-selection-bg);
+}
+.chomy-document {
+  counter-reset: chomy-equation;
+}
+.chomy-document .katex {
+  font-size: var(--chomy-math-size);
+  color: inherit;
+}
+.chomy-document .math-block {
+  position: relative;
+  counter-increment: chomy-equation;
+  margin: 1.25em 0;
+  padding: 0 2.5em;
+  break-inside: avoid;
+}
+.chomy-document .math-block .katex-display {
+  margin: 0;
+  padding: 0.35em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.chomy-document .math-block::after {
+  content: "(" counter(chomy-equation) ")";
+  display: var(--chomy-math-number-display);
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: KaTeX_Main, "Times New Roman", serif;
+  font-size: var(--chomy-math-size);
+}
+.chomy-document .math-block:has(.tag)::after {
+  display: none;
+}
+.chomy-document .math-block:has(.tag) {
+  padding: 0;
 }
 .chomy-document ::selection {
   background: var(--chomy-selection-bg);

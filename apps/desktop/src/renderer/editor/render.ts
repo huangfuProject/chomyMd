@@ -25,7 +25,8 @@ const marked = new Marked({
         if (match)
           return { type: "chomyBlockMath", raw: match[0], text: match[1] };
       },
-      renderer: (token) => formula(String(token.text), true),
+      renderer: (token) =>
+        `<div class="math-block">${formula(String(token.text), true)}</div>`,
     },
     {
       name: "chomyInlineMath",

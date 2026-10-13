@@ -1,4 +1,5 @@
 const path = require("node:path");
+const fs = require("node:fs/promises");
 const portableCross = process.env.CHOMY_PORTABLE_CROSS === "1";
 const signing = process.env.APPLE_SIGNING_IDENTITY;
 const notarize =
@@ -76,6 +77,23 @@ module.exports = {
           },
         }
       : {}),
+  },
+  hooks: {
+    preMake: async () => {
+      if (process.platform !== "win32") return;
+      // Squirrel expects unqualified names; pnpm does not run this vendor setup.
+      const vendor = path.join(
+        path.dirname(require.resolve("electron-winstaller/package.json")),
+        "vendor",
+      );
+      if (!["x64", "arm64"].includes(process.arch))
+        throw new Error(`Unsupported Squirrel build host: ${process.arch}`);
+      for (const extension of ["exe", "dll"])
+        await fs.copyFile(
+          path.join(vendor, `7z-${process.arch}.${extension}`),
+          path.join(vendor, `7z.${extension}`),
+        );
+    },
   },
   makers: [
     { name: "@electron-forge/maker-zip", platforms: ["darwin", "win32"] },

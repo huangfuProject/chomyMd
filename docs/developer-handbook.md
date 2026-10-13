@@ -1,6 +1,6 @@
 # Chomy 开发与主题制作手册
 
-适用版本：应用 1.0.1；IPC v1；主题协议 1.0.0。本文描述仓库中已实现的行为，面向接手维护、增加功能和制作主题的开发者。应用目前为内部测试版本，平台发行条件见文末。
+适用版本：应用 1.0.2；IPC v1；主题协议 1.0.0。本文描述仓库中已实现的行为，面向接手维护、增加功能和制作主题的开发者。应用目前为内部测试版本，平台发行条件见文末。
 
 ## 1. 快速开始
 
@@ -133,7 +133,7 @@ frontmatter、任意 HTML、指令、脚注、数学或不安全协议等不适�
 
 布局由标题栏、可收起侧栏、正文、状态栏构成。macOS 使用 hiddenInset 原生交通灯；主窗口初始 1120×800，最小 700×480。标题栏显示文件名和编辑状态，常用文件动作使用原创线性 SVG 图标。
 
-编辑工具默认收起；点击工具按钮展开，表格选区出现结构工具。侧栏宽度自适应，正文默认最大宽度 960 px、字号 16 px、行高 1.7。用户偏好允许字号 12–28 px、宽度 540–1000 px。宽窗口中正文居中，小窗口保留边距。
+编辑工具默认收起；点击工具按钮展开，表格选区出现结构工具。侧栏宽度自适应，正文默认最大宽度 960 px、字号 16 px、行高 1.6。用户偏好允许字号 12–28 px、宽度 540–1000 px。宽窗口中正文居中，小窗口保留边距。
 
 应用外壳使用内部 `--shell-*` 变量，正文使用公开 `--chomy-*` 变量。第三方主题仅控制正文；偏好设置、保存冲突与安全提示继续使用应用样式。自定义纯暗色主题匹配暗色外壳；双色主题由系统深浅偏好决定外壳。
 
@@ -178,7 +178,7 @@ my-paper/
 }
 ```
 
-`engine` 是主题协议要求，独立于应用版本；当前应用为 1.0.1，主题协议为 1.0.0。目前必须为字面 `>=1.0.0`，不是任意 semver 表达式。manifest 是严格结构，未知字段会拒绝。
+`engine` 是主题协议要求，独立于应用版本；当前应用为 1.0.2，主题协议为 1.0.0。目前必须为字面 `>=1.0.0`，不是任意 semver 表达式。manifest 是严格结构，未知字段会拒绝。
 
 | 字段            | 规则                                                                |
 | --------------- | ------------------------------------------------------------------- |
@@ -249,9 +249,25 @@ a {
 | --chomy-selection-bg      | rgba(64,120,170,.16)，选中文本                 |
 | --chomy-font-body         | Apple/Segoe UI/system sans-serif，正文字体     |
 | --chomy-font-mono         | ui-monospace/SFMono-Regular/Consolas，代码字体 |
-| --chomy-body-line-height  | 1.7，正文行高                                  |
+| --chomy-body-line-height  | 1.6，正文行高                                  |
 | --chomy-body-size         | 用户偏好控制，默认 16px                        |
 | --chomy-content-max-width | 用户偏好控制，默认 960px                       |
+
+表格默认使用内容宽度分配列，只有包含 `data-colwidth` 的手动调整表格使用固定布局。单元格段落默认无额外外边距，内边距 6px 13px，垂直居中；阅读模式的 `align` 属性与编辑模式的行内对齐均保留。编辑器表头位于 tbody，阅读表头位于 thead，因此隔行背景选择器分别处理，首行正文始终使用正文背景。
+
+还可设置 `--chomy-table-border`（默认跟随正文边框）、`--chomy-table-header-bg`（默认跟随隔行背景）、`--chomy-table-cell-padding`（默认 `6px 13px`）、`--chomy-math-size`（默认 `1.1em`）和 `--chomy-math-number-display`（默认 `block`；设为 `none` 隐藏自动编号）。例如：
+
+```css
+body {
+  --chomy-table-header-bg: #f0e6d7;
+  --chomy-table-border: #ded4c6;
+  --chomy-table-cell-padding: 6px 13px;
+  --chomy-math-size: 1.1em;
+  --chomy-math-number-display: none;
+}
+```
+
+块公式包裹在 `.math-block` 中，编号是文档内 CSS 计数器，不写入 Markdown；显式 `\tag{...}` 使用 KaTeX 原有标签并隐藏自动标签。主题隐藏的是自动标签，显式标签仍保留。长公式在块内水平滚动；导出沿用阅读样式。公式仍使用源码编辑与阅读渲染，排版并不使公式可视编辑成为可用功能。
 
 应用把字号与正文宽度作为根元素行内变量写入，优先于主题的普通声明。推荐尊重此约定，避免用 `!important` 抢占用户控制。主题根背景同步用于正文容器；应用标题栏与侧栏不会跟随任意主题变量。
 
@@ -395,3 +411,7 @@ CI 在 macOS arm64 与 Windows x64 执行检查、E2E、打包和打包版测试
 公开发行前还需要：Windows 10/11 实机安装与输入法/路径验收、真实 S3/MinIO/OSS 桶验证、Developer ID 签名与公证、Windows 签名与 SmartScreen、视觉批准、项目 LICENSE 与发布归属。当前内部包未签名，跨平台 Windows 构建只验证生成了 x64 产物。详细清单见 `docs/release/platform-checklist.md`。
 
 依赖声明见 `docs/release/dependency-licenses.md` 和随包 THIRD_PARTY_NOTICES.txt。项目自身许可证由拥有者确定，不由第三方声明推导。
+
+### Windows 打包依赖准备
+
+Forge 的 preMake 在 Windows 主机上把 electron-winstaller/vendor 内对应主机架构的 7z-x64 或 7z-arm64 二进制复制为 Squirrel 所需的 7z.exe/7z.dll。pnpm 默认禁止该依赖的安装脚本；当前依赖脚本也误把 os.arch 函数本身当作架构值。因此由项目显式准备随依赖发布的文件，不依赖下载外部工具。源码目录不会包含复制出的 vendor 文件。Windows 安装器构建必须以 Windows CI 结果为准。

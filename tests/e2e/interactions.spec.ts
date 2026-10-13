@@ -475,3 +475,51 @@ test("CJK emphasis renders, accepts typed markers and survives source/save/readi
     await fs.rm(directory, { recursive: true, force: true });
   }
 });
+
+test("bulk and IME emphasis commits do not serialize as escaped asterisks", async () => {
+  const directory = await fs.mkdtemp(
+    path.join(os.tmpdir(), "chomy-ime-emphasis-"),
+  );
+  const filename = path.join(directory, "input.md");
+  await fs.writeFile(filename, "Start\n");
+  const app = await launch(directory);
+  try {
+    const page = await app.firstWindow();
+    await dialogs(app, filename);
+    await page.getByRole("button", { name: "打开", exact: true }).click();
+    const editor = page.locator(".ProseMirror");
+    await expect(editor.locator("p")).toHaveText("Start");
+    await editor.click();
+    await page.keyboard.press(`${modifier}+End`);
+    await page.keyboard.press("Enter");
+    await page.keyboard.insertText("*你好*");
+    await expect(editor.locator("em")).toHaveText("你好");
+    await page.keyboard.press("Enter");
+    await editor.dispatchEvent("compositionstart", { data: "" });
+    await page.keyboard.insertText("*输入法*");
+    await editor.dispatchEvent("compositionend", { data: "*输入法*" });
+    await expect(editor.locator("em")).toHaveText(["你好", "输入法"]);
+    await page.keyboard.press("Enter");
+    await page.keyboard.insertText("\\*字面星号\\*");
+    await expect(editor.locator("em")).toHaveCount(2);
+    await page.getByRole("button", { name: "保存", exact: true }).click();
+    await expect
+      .poll(() => fs.readFile(filename, "utf8"))
+      .toContain("*输入法*");
+    const saved = await fs.readFile(filename, "utf8");
+    expect(saved).toContain("*你好*");
+    expect(saved).toContain("*输入法*");
+    expect(saved).not.toContain("\\*你好\\*");
+    expect(saved).not.toContain("\\*输入法\\*");
+    await page.getByRole("button", { name: "源码", exact: true }).click();
+    await expect(page.locator(".cm-content")).toContainText("*你好*");
+    await page.getByRole("button", { name: "阅读", exact: true }).click();
+    await expect(page.locator(".reading-preview em")).toHaveText([
+      "你好",
+      "输入法",
+    ]);
+  } finally {
+    await stop(app);
+    await fs.rm(directory, { recursive: true, force: true });
+  }
+});

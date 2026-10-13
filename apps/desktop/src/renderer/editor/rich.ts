@@ -29,6 +29,7 @@ import { history } from "@milkdown/kit/plugin/history";
 import { clipboard } from "@milkdown/kit/plugin/clipboard";
 import { callCommand, insert, replaceAll } from "@milkdown/kit/utils";
 import { TextSelection } from "@milkdown/kit/prose/state";
+import { ReplaceStep } from "@milkdown/kit/prose/transform";
 import {
   addRowAfter,
   addColumnAfter,
@@ -41,6 +42,7 @@ import { selectionToolsPlugin } from "./selectionTools";
 import { presentationPlugin } from "./highlight";
 import { codeLanguageOptions } from "./code-languages";
 import { exitCodeBlockDown } from "./exit-code-block";
+import { normalizeTypedEmphasis } from "./normalize-emphasis";
 import type { EditorAdapter, EditorSelection } from "@chomy/editor-core";
 import { imageUrl } from "@chomy/markdown-core";
 export class RichAdapter implements EditorAdapter {
@@ -61,6 +63,7 @@ export class RichAdapter implements EditorAdapter {
     command: (value: string) => void,
   ) {
     const holder: { adapter?: RichAdapter } = {};
+    let compositionEmphasis = false;
     const editor = Editor.make()
       .config((ctx) => {
         ctx.set(rootCtx, root);
@@ -71,6 +74,14 @@ export class RichAdapter implements EditorAdapter {
           dispatchTransaction: (tr) => {
             const view = ctx.get(editorViewCtx);
             if (holder.adapter?.destroyed || !view.state) return;
+            const typedDelimiter = tr.steps.some(
+              (step) =>
+                step instanceof ReplaceStep &&
+                step.slice.content
+                  .textBetween(0, step.slice.content.size)
+                  .includes("*"),
+            );
+            if (view.composing && typedDelimiter) compositionEmphasis = true;
             view.updateState(view.state.applyTransaction(tr).state);
             if (
               holder.adapter &&
@@ -78,9 +89,29 @@ export class RichAdapter implements EditorAdapter {
               tr.docChanged &&
               !view.composing
             ) {
+              const normalized = typedDelimiter
+                ? normalizeTypedEmphasis(view.state, ctx.get(parserCtx))
+                : null;
+              if (normalized)
+                view.updateState(view.state.applyTransaction(normalized).state);
               holder.adapter.value = ctx.get(serializerCtx)(view.state.doc);
               change(holder.adapter.value);
             }
+          },
+          handleTextInput: (view, from, to, text) => {
+            const position = view.state.doc.resolve(from);
+            if (
+              text.length <= 1 ||
+              !text.includes("*") ||
+              view.composing ||
+              position.parent.type.spec.code ||
+              position.marks().some((mark) => mark.type.spec.code)
+            )
+              return false;
+            // Milkdown's character input rule assumes the body is already in
+            // the document; a whole committed string must be inserted first.
+            view.dispatch(view.state.tr.insertText(text, from, to));
+            return true;
           },
           transformPastedHTML: (html) =>
             DOMPurify.sanitize(html, { FORBID_ATTR: ["style", "srcset"] }),
@@ -149,10 +180,27 @@ export class RichAdapter implements EditorAdapter {
               }
               return false;
             },
+            compositionstart: () => {
+              compositionEmphasis = false;
+              return false;
+            },
             compositionend: () => {
-              setTimeout(() => {
-                if (holder.adapter) holder.adapter.emit(change);
-              }, 0);
+              const finish = () => {
+                if (!holder.adapter || holder.adapter.destroyed) return;
+                const view = ctx.get(editorViewCtx);
+                // ProseMirror may still be flushing the final IME DOM mutation.
+                if (view.composing) {
+                  setTimeout(finish, 16);
+                  return;
+                }
+                const normalized = compositionEmphasis
+                  ? normalizeTypedEmphasis(view.state, ctx.get(parserCtx))
+                  : null;
+                compositionEmphasis = false;
+                if (normalized) view.dispatch(normalized);
+                holder.adapter.emit(change);
+              };
+              setTimeout(finish, 0);
               return false;
             },
           },

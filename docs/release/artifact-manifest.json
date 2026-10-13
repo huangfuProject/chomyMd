@@ -1,6 +1,6 @@
 {
-  "version": "1.0.5",
-  "generatedAt": "2026-10-13T13:26:46.414Z",
+  "version": "1.0.6",
+  "generatedAt": "2026-10-13T13:43:26.123Z",
   "buildHost": {
     "platform": "darwin",
     "architecture": "arm64"
@@ -15,33 +15,33 @@
     },
     {
       "path": "apps/desktop/out/Chomy-darwin-arm64/Chomy.app/Contents/Resources/app.asar",
-      "bytes": 30390476,
-      "sha256": "4ab44ebbf8f848502883f874c81d07ea62e2d20bc9f91a2e8f4a189f4163a7cd"
+      "bytes": 30392120,
+      "sha256": "aab2dbd026ac07aa965e44663e42159f4f708a904140f61f23de04dc50745039"
     },
     {
-      "path": "apps/desktop/out/make/zip/darwin/arm64/Chomy-darwin-arm64-1.0.5.zip",
-      "bytes": 136028859,
-      "sha256": "e45dcd1f9fd85577624c0716734c6395f0e8d6c0719408b2a7c3e06c74941d15"
+      "path": "apps/desktop/out/make/zip/darwin/arm64/Chomy-darwin-arm64-1.0.6.zip",
+      "bytes": 136029592,
+      "sha256": "9bf30d964811312fa7be0b150ed43cbd370bb77ee43560b5989341f7c0265a25"
     },
     {
-      "path": "apps/desktop/out/make/dmg/Chomy-1.0.5-arm64-internal.dmg",
-      "bytes": 137481446,
-      "sha256": "623ad3e9ae05891ecaba146797c76400c24de958f9a0e9e47508667903683526"
+      "path": "apps/desktop/out/make/dmg/Chomy-1.0.6-arm64-internal.dmg",
+      "bytes": 137481911,
+      "sha256": "cb213e74bb646f5c06a3ac5b3a823e6e15f0297fd6d04af7afd61221d63d2cf3"
     },
     {
       "path": "apps/desktop/out/Chomy-win32-x64/Chomy.exe",
       "bytes": 246302208,
-      "sha256": "dd48302577c97c86f1462d88256b7d04d14642a2fb8006df21a7e184e368917a"
+      "sha256": "fe31969cf9b16a71c3589b13b2c590343abe6e487bba9d812efc2fdeacfe5463"
     },
     {
       "path": "apps/desktop/out/Chomy-win32-x64/resources/app.asar",
-      "bytes": 30390476,
-      "sha256": "4ab44ebbf8f848502883f874c81d07ea62e2d20bc9f91a2e8f4a189f4163a7cd"
+      "bytes": 30392120,
+      "sha256": "aab2dbd026ac07aa965e44663e42159f4f708a904140f61f23de04dc50745039"
     },
     {
-      "path": "apps/desktop/out/make/zip/win32/x64/Chomy-win32-x64-1.0.5-portable.zip",
-      "bytes": 166797313,
-      "sha256": "d9c763f8184aa5847607f329095ba67ef0e884208af125e9bead7841677b355c"
+      "path": "apps/desktop/out/make/zip/win32/x64/Chomy-win32-x64-1.0.6-portable.zip",
+      "bytes": 166798042,
+      "sha256": "377413f8d0b9c038d82fea2075d458be58ec751bdd6b2a70da7605991455dbc0"
     }
   ]
 }

@@ -1,32 +1,8 @@
-import hljs from "highlight.js/lib/core";
-import javascript from "highlight.js/lib/languages/javascript";
-import typescript from "highlight.js/lib/languages/typescript";
-import python from "highlight.js/lib/languages/python";
-import json from "highlight.js/lib/languages/json";
-import bash from "highlight.js/lib/languages/bash";
+import { highlighted } from "./code-languages";
 import { $prose } from "@milkdown/kit/utils";
 import { Plugin } from "@milkdown/kit/prose/state";
 import { Decoration, DecorationSet } from "@milkdown/kit/prose/view";
 import type { Node as ProseNode } from "@milkdown/kit/prose/model";
-for (const [name, language] of Object.entries({
-  javascript,
-  typescript,
-  python,
-  json,
-  bash,
-}))
-  hljs.registerLanguage(name, language);
-export function highlighted(code: string, language: string) {
-  return language && hljs.getLanguage(language)
-    ? hljs.highlight(code, { language, ignoreIllegals: true }).value
-    : hljs.highlightAuto(code, [
-        "javascript",
-        "typescript",
-        "python",
-        "json",
-        "bash",
-      ]).value;
-}
 function decorations(doc: ProseNode, selection: number) {
   const result: Decoration[] = [];
   doc.descendants((node, pos) => {

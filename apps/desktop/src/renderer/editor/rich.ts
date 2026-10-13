@@ -39,6 +39,8 @@ import DOMPurify from "dompurify";
 import { textRanges } from "./textRanges";
 import { selectionToolsPlugin } from "./selectionTools";
 import { presentationPlugin } from "./highlight";
+import { codeLanguageOptions } from "./code-languages";
+import { exitCodeBlockDown } from "./exit-code-block";
 import type { EditorAdapter, EditorSelection } from "@chomy/editor-core";
 import { imageUrl } from "@chomy/markdown-core";
 export class RichAdapter implements EditorAdapter {
@@ -82,7 +84,20 @@ export class RichAdapter implements EditorAdapter {
           },
           transformPastedHTML: (html) =>
             DOMPurify.sanitize(html, { FORBID_ATTR: ["style", "srcset"] }),
-          handleKeyDown: (_view, event) => {
+          handleKeyDown: (view, event) => {
+            if (
+              event.key === "ArrowDown" &&
+              !event.shiftKey &&
+              !event.metaKey &&
+              !event.ctrlKey &&
+              !event.altKey &&
+              !event.isComposing &&
+              !view.composing &&
+              exitCodeBlockDown(view.state, (tr) => view.dispatch(tr))
+            ) {
+              event.preventDefault();
+              return true;
+            }
             if (
               (event.metaKey || event.ctrlKey) &&
               event.key.toLowerCase() === "z"
@@ -150,16 +165,9 @@ export class RichAdapter implements EditorAdapter {
               tools.contentEditable = "false";
               const select = document.createElement("select");
               select.setAttribute("aria-label", "代码语言");
-              for (const language of [
-                "",
-                "javascript",
-                "typescript",
-                "python",
-                "json",
-                "bash",
-                "markdown",
-                "mermaid",
-              ]) {
+              for (const language of codeLanguageOptions(
+                String(node.attrs.language ?? ""),
+              )) {
                 const option = document.createElement("option");
                 option.value = language;
                 option.textContent = language || "纯文本";

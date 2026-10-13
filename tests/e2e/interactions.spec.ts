@@ -356,3 +356,46 @@ test("task checkboxes toggle, undo across modes and persist as Markdown", async 
     await fs.rm(directory, { recursive: true, force: true });
   }
 });
+
+test("Down exits the last code line into a paragraph and preserves the code", async () => {
+  const directory = await fs.mkdtemp(
+    path.join(os.tmpdir(), "chomy-code-exit-"),
+  );
+  const filename = path.join(directory, "code.md");
+  await fs.writeFile(filename, "```java\nfirst();\nlast();\n```\n");
+  const app = await launch(directory);
+  try {
+    const page = await app.firstWindow();
+    await dialogs(app, filename);
+    await page.getByRole("button", { name: "打开", exact: true }).click();
+    const editor = page.locator(".ProseMirror");
+    const code = editor.locator(".code-block code");
+    await expect(code).toHaveText("first();\nlast();");
+    await code.click();
+    await page.keyboard.press(`${modifier}+Home`);
+    await page.keyboard.press("ArrowDown");
+    // Moving from the first line remains inside the fence.
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          Boolean(
+            window.getSelection()?.anchorNode?.parentElement?.closest("code"),
+          ),
+        ),
+      )
+      .toBe(true);
+    await page.keyboard.press(`${modifier}+End`);
+    await page.keyboard.press("ArrowLeft");
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.type("Outside code");
+    await expect(editor.locator("p").last()).toHaveText("Outside code");
+    await expect(code).toHaveText("first();\nlast();");
+    await page.getByRole("button", { name: "保存", exact: true }).click();
+    await expect
+      .poll(() => fs.readFile(filename, "utf8"))
+      .toContain("```java\nfirst();\nlast();\n```\n\nOutside code");
+  } finally {
+    await stop(app);
+    await fs.rm(directory, { recursive: true, force: true });
+  }
+});

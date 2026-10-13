@@ -300,3 +300,70 @@ test("code language, math/Mermaid preview and 1 MB source editing", async () => 
     await fs.rm(directory, { recursive: true, force: true });
   }
 });
+
+test("Java and language aliases highlight, persist, and preserve unknown labels", async () => {
+  const directory = await fs.mkdtemp(
+    path.join(os.tmpdir(), "chomy-languages-"),
+  );
+  const filename = path.join(directory, "languages.md");
+  await fs.writeFile(
+    filename,
+    [
+      "# Languages",
+      "",
+      "```Java",
+      'public class Hello { String greeting = "你好"; }',
+      "```",
+      "",
+      "```js",
+      "const answer = 42;",
+      "```",
+      "",
+      "```custom-language",
+      "<script>const answer = 42;</script>",
+      "```",
+      "",
+    ].join("\n"),
+  );
+  const app = await launch(directory);
+  try {
+    const page = await app.firstWindow();
+    await dialogs(app, filename);
+    await page.getByRole("button", { name: "打开", exact: true }).click();
+    const selectors = page.getByLabel("代码语言");
+    await expect(selectors).toHaveCount(3);
+    await expect(selectors.nth(0)).toHaveValue("Java");
+    await expect(selectors.nth(1)).toHaveValue("js");
+    await expect(selectors.nth(2)).toHaveValue("custom-language");
+    await expect(
+      page.locator(".code-block").nth(0).locator(".hljs-keyword").first(),
+    ).toHaveText("public");
+    await expect(
+      page.locator(".code-block").nth(1).locator(".hljs-keyword").first(),
+    ).toHaveText("const");
+    await expect(page.locator(".code-block").nth(2).locator("code")).toHaveText(
+      "<script>const answer = 42;</script>",
+    );
+    await selectors.nth(0).selectOption("java");
+    await page.getByRole("button", { name: "保存", exact: true }).click();
+    await expect.poll(() => fs.readFile(filename, "utf8")).toContain("```java");
+    const saved = await fs.readFile(filename, "utf8");
+    expect(saved).toContain("```js");
+    expect(saved).toContain("```custom-language");
+    await page.getByRole("button", { name: "阅读", exact: true }).click();
+    const blocks = page.locator(".reading-preview pre code");
+    await expect(blocks.nth(0).locator(".hljs-keyword").first()).toHaveText(
+      "public",
+    );
+    await expect(blocks.nth(1).locator(".hljs-keyword").first()).toHaveText(
+      "const",
+    );
+    await expect(blocks.nth(2)).toHaveText(
+      "<script>const answer = 42;</script>",
+    );
+    await expect(blocks.nth(2).locator("script")).toHaveCount(0);
+  } finally {
+    await stop(app);
+    await fs.rm(directory, { recursive: true, force: true });
+  }
+});

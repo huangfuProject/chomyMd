@@ -1,7 +1,7 @@
 import { Marked } from "marked";
 import DOMPurify from "dompurify";
 import katex from "katex";
-import { highlighted } from "./highlight";
+import { highlighted } from "./code-languages";
 import { imageUrl } from "@chomy/markdown-core";
 function formula(text: string, displayMode: boolean) {
   return katex.renderToString(text, {

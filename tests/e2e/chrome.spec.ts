@@ -65,6 +65,28 @@ test("minimal chrome keeps sidebar, menus and document controls usable", async (
         "帮助",
       ]),
     );
+    const nativeLabels = await app.evaluate(({ Menu }) => {
+      const labels: Record<string, string> = {};
+      const visit = (menu: Electron.Menu) => {
+        for (const item of menu.items) {
+          if (item.role) labels[item.role] = item.label;
+          if (item.submenu) visit(item.submenu);
+        }
+      };
+      visit(Menu.getApplicationMenu()!);
+      return labels;
+    });
+    expect(nativeLabels).toMatchObject({
+      cut: "剪切",
+      copy: "复制",
+      paste: "粘贴",
+      selectall: "全选",
+      close: "关闭窗口",
+      resetzoom: "实际大小",
+      zoomin: "放大",
+      zoomout: "缩小",
+      togglefullscreen: "切换全屏",
+    });
     await clickAction(page, "源码");
     await page.locator(".cm-content").click();
     await page.keyboard.insertText("# 第一节\n\n## 第二节");

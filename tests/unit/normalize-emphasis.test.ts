@@ -88,5 +88,32 @@ describe("committed emphasis normalization", () => {
       }),
     ).toBeNull();
     expect(before.doc.textContent).toBe("*你好*");
+    expect(
+      normalizeTypedEmphasis(
+        before,
+        () => {
+          throw Error("Must not parse");
+        },
+        before.doc.content.size + 1,
+      ),
+    ).toBeNull();
+  });
+  it("normalizes the committed range after the caret moves past it", () => {
+    const before = state("*你好* trailing");
+    const parse = () =>
+      schema.node(
+        "doc",
+        null,
+        schema.node(
+          "paragraph",
+          null,
+          schema.text("你好", [schema.mark("emphasis")]),
+        ),
+      );
+    const tr = normalizeTypedEmphasis(before, parse, 5);
+    expect(tr).not.toBeNull();
+    const after = before.apply(tr!);
+    expect(after.doc.textContent).toBe("你好 trailing");
+    expect(after.selection.$from.parentOffset).toBe("你好 trailing".length);
   });
 });

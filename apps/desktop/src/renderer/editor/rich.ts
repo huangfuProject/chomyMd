@@ -63,7 +63,7 @@ export class RichAdapter implements EditorAdapter {
     command: (value: string) => void,
   ) {
     const holder: { adapter?: RichAdapter } = {};
-    let compositionEmphasis = false;
+    let compositionEmphasisPosition: number | null = null;
     const editor = Editor.make()
       .config((ctx) => {
         ctx.set(rootCtx, root);
@@ -81,19 +81,49 @@ export class RichAdapter implements EditorAdapter {
                   .textBetween(0, step.slice.content.size)
                   .includes("*"),
             );
-            if (view.composing && typedDelimiter) compositionEmphasis = true;
+            if (compositionEmphasisPosition !== null)
+              compositionEmphasisPosition = tr.mapping.map(
+                compositionEmphasisPosition,
+                -1,
+              );
             view.updateState(view.state.applyTransaction(tr).state);
+            let delimiterEnd: number | null = null;
+            if (typedDelimiter) {
+              const { $from } = view.state.selection;
+              if ($from.parent.isTextblock) {
+                const prefix = $from.parent.textBetween(
+                  0,
+                  $from.parentOffset,
+                  undefined,
+                  "\uFFFC",
+                );
+                const lastStar = prefix.lastIndexOf("*");
+                if (lastStar >= 0) delimiterEnd = $from.start() + lastStar + 1;
+              }
+              if (view.composing) compositionEmphasisPosition = delimiterEnd;
+            }
             if (
               holder.adapter &&
               !holder.adapter.suppressed &&
               tr.docChanged &&
               !view.composing
             ) {
-              const normalized = typedDelimiter
-                ? normalizeTypedEmphasis(view.state, ctx.get(parserCtx))
-                : null;
-              if (normalized)
+              const normalized =
+                delimiterEnd !== null
+                  ? normalizeTypedEmphasis(
+                      view.state,
+                      ctx.get(parserCtx),
+                      delimiterEnd,
+                    )
+                  : null;
+              if (normalized) {
+                if (compositionEmphasisPosition !== null)
+                  compositionEmphasisPosition = normalized.mapping.map(
+                    compositionEmphasisPosition,
+                    -1,
+                  );
                 view.updateState(view.state.applyTransaction(normalized).state);
+              }
               holder.adapter.value = ctx.get(serializerCtx)(view.state.doc);
               change(holder.adapter.value);
             }
@@ -181,7 +211,7 @@ export class RichAdapter implements EditorAdapter {
               return false;
             },
             compositionstart: () => {
-              compositionEmphasis = false;
+              compositionEmphasisPosition = null;
               return false;
             },
             compositionend: () => {
@@ -193,10 +223,15 @@ export class RichAdapter implements EditorAdapter {
                   setTimeout(finish, 16);
                   return;
                 }
-                const normalized = compositionEmphasis
-                  ? normalizeTypedEmphasis(view.state, ctx.get(parserCtx))
-                  : null;
-                compositionEmphasis = false;
+                const normalized =
+                  compositionEmphasisPosition !== null
+                    ? normalizeTypedEmphasis(
+                        view.state,
+                        ctx.get(parserCtx),
+                        compositionEmphasisPosition,
+                      )
+                    : null;
+                compositionEmphasisPosition = null;
                 if (normalized) view.dispatch(normalized);
                 holder.adapter.emit(change);
               };

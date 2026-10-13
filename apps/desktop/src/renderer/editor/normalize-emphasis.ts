@@ -5,8 +5,11 @@ import type { EditorState, Transaction } from "@milkdown/kit/prose/state";
 export function normalizeTypedEmphasis(
   state: EditorState,
   parse: (markdown: string) => ProseNode | null,
+  position = state.selection.from,
 ): Transaction | null {
-  const { $from, empty } = state.selection;
+  if (position < 0 || position > state.doc.content.size) return null;
+  const $from = state.doc.resolve(position);
+  const { empty } = state.selection;
   if (!empty || !$from.parent.isTextblock || $from.parent.type.spec.code)
     return null;
   const base = Math.max(0, $from.parentOffset - 1000);

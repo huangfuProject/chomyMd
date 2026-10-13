@@ -523,3 +523,52 @@ test("bulk and IME emphasis commits do not serialize as escaped asterisks", asyn
     await fs.rm(directory, { recursive: true, force: true });
   }
 });
+
+test("character input and IME confirmation by Space/Enter keep unescaped emphasis", async () => {
+  const directory = await fs.mkdtemp(
+    path.join(os.tmpdir(), "chomy-confirm-emphasis-"),
+  );
+  const filename = path.join(directory, "confirm.md");
+  await fs.writeFile(filename, "");
+  const app = await launch(directory);
+  try {
+    const page = await app.firstWindow();
+    await dialogs(app, filename);
+    await page.getByRole("button", { name: "打开", exact: true }).click();
+    const editor = page.locator(".ProseMirror");
+    for (const mode of [
+      "characters",
+      "shift-eight",
+      "ime-space",
+      "ime-enter",
+    ]) {
+      await editor.click();
+      await page.keyboard.press(`${modifier}+a`);
+      await page.keyboard.press("Backspace");
+      if (mode === "characters")
+        await page.keyboard.type("*asdasdasdas*", { delay: 30 });
+      if (mode === "shift-eight") {
+        await page.keyboard.press("Shift+Digit8");
+        await page.keyboard.type("asdasdasdas", { delay: 30 });
+        await page.keyboard.press("Shift+Digit8");
+      }
+      if (mode.startsWith("ime-")) {
+        await editor.dispatchEvent("compositionstart", { data: "" });
+        await page.keyboard.insertText("*asdasdasdas*");
+        await page.keyboard.press(mode === "ime-space" ? "Space" : "Enter");
+        await editor.dispatchEvent("compositionend", { data: "*asdasdasdas*" });
+      }
+      await expect(editor.locator("em")).toHaveText("asdasdasdas");
+      await page.keyboard.type(" AFTER");
+      await expect(editor.locator("em")).toHaveText("asdasdasdas");
+      await page.getByRole("button", { name: "保存", exact: true }).click();
+      await expect.poll(() => fs.readFile(filename, "utf8")).toContain("AFTER");
+      const saved = await fs.readFile(filename, "utf8");
+      expect(saved).toContain("*asdasdasdas*");
+      expect(saved).not.toContain("\\*asdasdasdas\\*");
+    }
+  } finally {
+    await stop(app);
+    await fs.rm(directory, { recursive: true, force: true });
+  }
+});

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.4 — 2026-10-13
+
+- 应用图标改为单个黑色衬线字母C与白色圆角方形底板，圆角外保留透明边距。
+- 同步更新Dock/窗口PNG、macOS ICNS与Windows ICO，移除旧chomy横向字标资源。
+
 ## 1.0.3 — 2026-10-13
 
 - 代码块从5种高亮语法扩展为highlight.js全部193种语言，选择框同步提供语言及别名，包含Java、Kotlin、C/C++、C#、Go、Rust、Swift、SQL等。

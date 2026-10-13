@@ -2,7 +2,7 @@
 
 状态：内部测试打包；公开发行尚未通过。
 
-主进程与 preload 由 esbuild 完整打包，renderer 由 Vite 构建。Forge 包含 app.asar，不复制 workspace 源码或 node_modules，避免 pnpm 工作区依赖遍历。Node 24、pnpm 10 和精确锁文件固定构建输入。应用图标为黑白配色的小写chomy衬线字标，PNG主文件通过scripts/build-icons.mjs转换为PNG、ICNS、ICO；格式转换使用AppKit，应用运行不依赖该工具。
+主进程与 preload 由 esbuild 完整打包，renderer 由 Vite 构建。Forge 包含 app.asar，不复制 workspace 源码或 node_modules，避免 pnpm 工作区依赖遍历。Node 24、pnpm 10 和精确锁文件固定构建输入。应用图标为黑白配色的C衬线字母，白色圆角方形底板、四角外透明，PNG主文件通过scripts/build-icons.mjs转换为PNG、ICNS、ICO；格式转换使用AppKit，应用运行不依赖该工具。
 
 macOS arm64 生成 .app、ZIP 和通过系统 hdiutil 创建/校验的 DMG，原生 arm64 测试应用可运行。没有 Developer ID 或公证凭据，产物仅用于内部测试。公开发行标志会在凭据缺失时拒绝构建。
 

@@ -1,6 +1,6 @@
 # Chomy 开发与主题制作手册
 
-适用版本：应用 1.0.0；IPC v1；主题协议 1.0.0。本文描述仓库中已实现的行为，面向接手维护、增加功能和制作主题的开发者。应用目前为内部测试版本，平台发行条件见文末。
+适用版本：应用 1.0.1；IPC v1；主题协议 1.0.0。本文描述仓库中已实现的行为，面向接手维护、增加功能和制作主题的开发者。应用目前为内部测试版本，平台发行条件见文末。
 
 ## 1. 快速开始
 
@@ -21,6 +21,7 @@ pnpm start
 | `pnpm test:e2e`        | 构建并启动真实 Electron 执行交互测试                               |
 | `pnpm make`            | 当前平台打包；macOS 生成 APP、ZIP 和内部 DMG                       |
 | `pnpm package:win`     | 生成 Windows x64 便携目录和 ZIP；跨平台生成不代表 Windows 运行验证 |
+| `pnpm test:installed`  | macOS从DMG复制后，在原构建不可用时执行完整E2E                      |
 | `pnpm test:packaged`   | 使用已打包应用运行 E2E，而非开发目录                               |
 | `pnpm verify:platform` | 检查当前平台验收条件                                               |
 | `pnpm notices`         | 更新依赖许可证清单及随包声明                                       |
@@ -177,7 +178,7 @@ my-paper/
 }
 ```
 
-`engine` 是主题协议要求，独立于应用版本；当前两者均为 1.0.0。目前必须为字面 `>=1.0.0`，不是任意 semver 表达式。manifest 是严格结构，未知字段会拒绝。
+`engine` 是主题协议要求，独立于应用版本；当前应用为 1.0.1，主题协议为 1.0.0。目前必须为字面 `>=1.0.0`，不是任意 semver 表达式。manifest 是严格结构，未知字段会拒绝。
 
 | 字段            | 规则                                                                |
 | --------------- | ------------------------------------------------------------------- |
@@ -382,6 +383,8 @@ fixtures 包括支持与不支持语法。系统 IME 不能用注入 composition
 `node scripts/capture-ui.mjs` 在隔离数据目录生成明亮、暗色、表格工具与主题偏好截图，输出到 docs/testing/screenshots。主题预览和 UI 截图应来自实际运行界面。目录宽度、字体与缩放改变时重新截图；原生交通灯不一定出现在 Electron 网页截图中，需额外原生窗口观察。
 
 ## 12. 打包、发行与交付边界
+
+DMG复制应用时必须保留相对符号链接，禁止将framework链接改成构建机的绝对路径。`scripts/lib/mac-bundle.ts`使用verbatimSymlinks，并检查每个链接最终都在应用包内。`pnpm test:installed`从只读DMG复制应用到带空格的独立目录，暂时移走原构建，再运行完整测试，最后恢复原构建并卸载测试镜像。CI也执行此步骤，不能只测试构建目录。
 
 macOS 产物位于 `apps/desktop/out/Chomy-darwin-arm64/Chomy.app`，ZIP 位于 out/make/zip，DMG 位于 out/make/dmg。Windows 便携目录位于 out/Chomy-win32-x64，便携 ZIP 位于 out/make/zip/win32/x64；实际 Windows 上由 Forge 制作安装包并验证 Squirrel 生命周期、快捷方式、文件关联和卸载。
 

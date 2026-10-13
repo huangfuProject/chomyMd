@@ -9,3 +9,7 @@ macOS arm64 生成 .app、ZIP 和通过系统 hdiutil 创建/校验的 DMG，原
 Windows 目标始终为 x64。Forge 配置 ZIP 与 Squirrel 安装包，处理安装事件与文件关联。macOS 上的交叉打包只证明产物生成，不能证明 Windows 10/11 安装、卸载、IME、文件锁或 SmartScreen 已通过。CI 在 macos-14 arm64 和 Windows x64 分别运行质量门禁、E2E、make 与打包应用 E2E；当前没有远端仓库，尚未执行远端 CI。
 
 更新策略：首版手动安装新版本；不启用自动下载或安装。公开发行前补齐签名、公证、版本升级/回滚和真实平台验收。
+
+## 安装后可移植性
+
+DMG临时复制必须使用verbatimSymlinks保留framework原有相对链接。默认fs.cp会将这些链接改成指向源目录的绝对链接，构建目录启动测试无法发现安装后的运行依赖。复制前后校验链接，拒绝绝对链接和越出应用包的相对链接；CI挂载DMG、复制应用、隐藏原构建，再运行完整E2E。

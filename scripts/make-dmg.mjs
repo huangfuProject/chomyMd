@@ -3,6 +3,7 @@ import { promisify } from "node:util";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { copyMacBundle } from "./lib/mac-bundle.ts";
 if (process.platform !== "darwin") process.exit(0);
 const run = promisify(execFile);
 const root = path.resolve(import.meta.dirname, "..");
@@ -17,10 +18,9 @@ const output = path.join(
 );
 await fs.mkdir(path.dirname(output), { recursive: true });
 try {
-  await fs.cp(
+  await copyMacBundle(
     path.join(root, "apps/desktop/out/Chomy-darwin-arm64/Chomy.app"),
     path.join(staging, "Chomy.app"),
-    { recursive: true },
   );
   await fs.symlink("/Applications", path.join(staging, "Applications"));
   await run(

@@ -29,6 +29,8 @@ jobs:
       - run: pnpm test:e2e
       - run: pnpm make
       - run: pnpm test:packaged
+      - run: pnpm test:installed
+        if: runner.os == 'macOS'
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -1,6 +1,6 @@
 {
   "name": "chomy-workspace",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.12.4",
@@ -23,7 +23,8 @@
     "test:packaged": "node scripts/test-packaged.mjs",
     "package:win": "pnpm build && node scripts/package-win.mjs && node scripts/make-win-zip.mjs",
     "verify:platform": "node scripts/verify-platform.mjs",
-    "notices": "node scripts/dependency-notices.mjs"
+    "notices": "node scripts/dependency-notices.mjs",
+    "test:installed": "node scripts/test-installed-mac.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

@@ -30,6 +30,32 @@ test("all 12 fixtures survive repeated modes and untouched save byte-for-byte", 
       const source = original.toString("utf8").replace(/^\ufeff/, "");
       if (!unsupportedReason(source)) {
         await expect(page.locator(".ProseMirror")).toBeVisible();
+        const firstHeading = source.match(/^# ([^\r\n]+)/m)?.[1];
+        if (firstHeading)
+          await expect(page.locator(".ProseMirror h1").first()).toHaveText(
+            firstHeading,
+          );
+        if (name === "02-advanced-table.md")
+          await expect(page.locator(".ProseMirror th").first()).toHaveText(
+            "左",
+          );
+        if (name === "03-code-fences.md")
+          await expect(page.locator(".ProseMirror code").first()).toHaveText(
+            "code",
+          );
+        if (["04-images-local.md", "05-images-remote.md"].includes(name))
+          await expect(
+            page
+              .locator(".ProseMirror img:not(.ProseMirror-separator)")
+              .first(),
+          ).toHaveAttribute(
+            "alt",
+            name === "04-images-local.md" ? "本地" : "远程",
+          );
+        if (name === "12-file-links.md")
+          await expect(page.locator(".ProseMirror a").first()).toHaveText(
+            "附件",
+          );
         const fingerprint = () =>
           page.locator(".ProseMirror").evaluate((root) => ({
             headings: Array.from(
@@ -47,8 +73,9 @@ test("all 12 fixtures survive repeated modes and untouched save byte-for-byte", 
             links: Array.from(root.querySelectorAll("a"), (node) =>
               node.getAttribute("href"),
             ),
-            images: Array.from(root.querySelectorAll("img"), (node) =>
-              node.getAttribute("alt"),
+            images: Array.from(
+              root.querySelectorAll("img:not(.ProseMirror-separator)"),
+              (node) => node.getAttribute("alt"),
             ),
           }));
         const before = await fingerprint();
@@ -57,7 +84,7 @@ test("all 12 fixtures survive repeated modes and untouched save byte-for-byte", 
           await expect(page.locator(".cm-content")).toBeVisible();
           await page.getByRole("button", { name: "源码", exact: true }).click();
           await expect(page.locator(".ProseMirror")).toBeVisible();
-          expect(await fingerprint()).toEqual(before);
+          await expect.poll(fingerprint).toEqual(before);
         }
       } else await expect(page.locator(".cm-content")).toBeVisible();
       await page.getByRole("button", { name: "保存", exact: true }).click();

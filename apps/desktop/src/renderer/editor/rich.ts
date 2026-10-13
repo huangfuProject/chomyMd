@@ -42,7 +42,10 @@ import { selectionToolsPlugin } from "./selectionTools";
 import { presentationPlugin } from "./highlight";
 import { codeLanguageOptions } from "./code-languages";
 import { exitCodeBlockDown } from "./exit-code-block";
-import { normalizeTypedEmphasis } from "./normalize-emphasis";
+import {
+  normalizeTypedEmphasis,
+  normalizeEnclosedEmphasis,
+} from "./normalize-emphasis";
 import type { EditorAdapter, EditorSelection } from "@chomy/editor-core";
 import { imageUrl } from "@chomy/markdown-core";
 export class RichAdapter implements EditorAdapter {
@@ -74,6 +77,12 @@ export class RichAdapter implements EditorAdapter {
           dispatchTransaction: (tr) => {
             const view = ctx.get(editorViewCtx);
             if (holder.adapter?.destroyed || !view.state) return;
+            const insertedText = tr.steps.some(
+              (step) =>
+                step instanceof ReplaceStep &&
+                step.slice.content.textBetween(0, step.slice.content.size)
+                  .length > 0,
+            );
             const typedDelimiter = tr.steps.some(
               (step) =>
                 step instanceof ReplaceStep &&
@@ -103,19 +112,29 @@ export class RichAdapter implements EditorAdapter {
               if (view.composing) compositionEmphasisPosition = delimiterEnd;
             }
             if (
+              view.composing &&
+              insertedText &&
+              !typedDelimiter &&
+              compositionEmphasisPosition === null
+            )
+              compositionEmphasisPosition = view.state.selection.from;
+            if (
               holder.adapter &&
               !holder.adapter.suppressed &&
               tr.docChanged &&
               !view.composing
             ) {
               const normalized =
-                delimiterEnd !== null
+                (delimiterEnd !== null
                   ? normalizeTypedEmphasis(
                       view.state,
                       ctx.get(parserCtx),
                       delimiterEnd,
                     )
-                  : null;
+                  : null) ??
+                (insertedText
+                  ? normalizeEnclosedEmphasis(view.state, ctx.get(parserCtx))
+                  : null);
               if (normalized) {
                 if (compositionEmphasisPosition !== null)
                   compositionEmphasisPosition = normalized.mapping.map(
@@ -225,11 +244,16 @@ export class RichAdapter implements EditorAdapter {
                 }
                 const normalized =
                   compositionEmphasisPosition !== null
-                    ? normalizeTypedEmphasis(
+                    ? (normalizeTypedEmphasis(
                         view.state,
                         ctx.get(parserCtx),
                         compositionEmphasisPosition,
-                      )
+                      ) ??
+                      normalizeEnclosedEmphasis(
+                        view.state,
+                        ctx.get(parserCtx),
+                        compositionEmphasisPosition,
+                      ))
                     : null;
                 compositionEmphasisPosition = null;
                 if (normalized) view.dispatch(normalized);

@@ -6,6 +6,7 @@ export function normalizeTypedEmphasis(
   state: EditorState,
   parse: (markdown: string) => ProseNode | null,
   position = state.selection.from,
+  enclosedCaret: number | null = null,
 ): Transaction | null {
   if (position < 0 || position > state.doc.content.size) return null;
   const $from = state.doc.resolve(position);
@@ -49,6 +50,11 @@ export function normalizeTypedEmphasis(
     for (let i = offset - 1; i >= 0 && prefix[i] === "\\"; i--) slashes++;
     if (slashes % 2) continue;
     const start = $from.start() + base + offset;
+    if (
+      enclosedCaret !== null &&
+      (enclosedCaret < start + delimiter.length || enclosedCaret >= end)
+    )
+      continue;
     let literal = true;
     state.doc.nodesBetween(start, end, (node) => {
       if (node.isInline && (!node.isText || node.marks.length)) literal = false;
@@ -78,7 +84,38 @@ export function normalizeTypedEmphasis(
         emphasis = false;
     });
     if (!emphasis) continue;
-    return state.tr.replaceWith(start, end, content).setStoredMarks([]);
+    return state.tr
+      .replaceWith(start, end, content)
+      .setStoredMarks(
+        state.selection.from >= start + delimiter.length &&
+          state.selection.from < end
+          ? (content.lastChild?.marks ?? [])
+          : [],
+      );
+  }
+  return null;
+}
+
+// The closing delimiter may already exist when text is inserted inside a pair.
+export function normalizeEnclosedEmphasis(
+  state: EditorState,
+  parse: (markdown: string) => ProseNode | null,
+  position = state.selection.from,
+): Transaction | null {
+  if (position < 0 || position > state.doc.content.size) return null;
+  const caret = state.doc.resolve(position);
+  if (!caret.parent.isTextblock || caret.parent.type.spec.code) return null;
+  const suffix = caret.parent.textBetween(
+    caret.parentOffset,
+    Math.min(caret.parent.content.size, caret.parentOffset + 1000),
+    undefined,
+    "\uFFFC",
+  );
+  for (const closing of suffix.matchAll(/\*{1,3}(?!\*)/g)) {
+    if (closing.index > 0 && suffix[closing.index - 1] === "*") continue;
+    const end = position + closing.index + closing[0].length;
+    const normalized = normalizeTypedEmphasis(state, parse, end, position);
+    if (normalized) return normalized;
   }
   return null;
 }

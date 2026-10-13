@@ -572,3 +572,50 @@ test("character input and IME confirmation by Space/Enter keep unescaped emphasi
     await fs.rm(directory, { recursive: true, force: true });
   }
 });
+
+test("typing inside an existing emphasis pair preserves formatting and saved Markdown", async () => {
+  const directory = await fs.mkdtemp(
+    path.join(os.tmpdir(), "chomy-pair-emphasis-"),
+  );
+  const filename = path.join(directory, "pairs.md");
+  await fs.writeFile(filename, "");
+  const app = await launch(directory);
+  try {
+    const page = await app.firstWindow();
+    await dialogs(app, filename);
+    await clickAction(page, "打开");
+    const editor = page.locator(".ProseMirror");
+    for (const [pair, text, selector, ime] of [
+      ["**", "ddd", "em", false],
+      ["****", "bold", "strong", false],
+      ["**", "你好", "em", true],
+    ] as const) {
+      await editor.click();
+      await page.keyboard.press(`${modifier}+a`);
+      await page.keyboard.press("Backspace");
+      await page.keyboard.type(pair, { delay: 25 });
+      for (let i = 0; i < pair.length / 2; i++)
+        await page.keyboard.press("ArrowLeft");
+      if (ime) {
+        await editor.dispatchEvent("compositionstart", { data: "" });
+        await page.keyboard.insertText(text);
+        await editor.dispatchEvent("compositionend", { data: text });
+      } else await page.keyboard.type(text, { delay: 25 });
+      await expect(editor.locator(selector)).toHaveText(text);
+      await clickAction(page, "保存");
+      const marker = pair.slice(0, pair.length / 2);
+      await expect
+        .poll(() => fs.readFile(filename, "utf8"))
+        .toContain(`${marker}${text}${marker}`);
+      expect(await fs.readFile(filename, "utf8")).not.toContain("\\*");
+      await clickAction(page, "源码");
+      await expect(page.locator(".cm-content")).toContainText(
+        `${marker}${text}${marker}`,
+      );
+      await clickAction(page, "源码");
+    }
+  } finally {
+    await stop(app);
+    await fs.rm(directory, { recursive: true, force: true });
+  }
+});

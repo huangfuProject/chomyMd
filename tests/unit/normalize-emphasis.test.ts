@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { Schema } from "@milkdown/kit/prose/model";
 import { EditorState, TextSelection } from "@milkdown/kit/prose/state";
-import { normalizeTypedEmphasis } from "../../apps/desktop/src/renderer/editor/normalize-emphasis";
+import {
+  normalizeTypedEmphasis,
+  normalizeEnclosedEmphasis,
+} from "../../apps/desktop/src/renderer/editor/normalize-emphasis";
 const schema = new Schema({
   nodes: {
     doc: { content: "block+" },
@@ -116,4 +119,41 @@ describe("committed emphasis normalization", () => {
     expect(after.doc.textContent).toBe("你好 trailing");
     expect(after.selection.$from.parentOffset).toBe("你好 trailing".length);
   });
+});
+
+it("normalizes pre-existing pairs and keeps typing inside the emphasis mark", () => {
+  const before = state("*d*", "paragraph", false, 2);
+  const parse = () =>
+    schema.node(
+      "doc",
+      null,
+      schema.node(
+        "paragraph",
+        null,
+        schema.text("d", [schema.mark("emphasis")]),
+      ),
+    );
+  const tr = normalizeEnclosedEmphasis(before, parse);
+  expect(tr).not.toBeNull();
+  let after = before.apply(tr!);
+  expect(after.selection.$from.parentOffset).toBe(1);
+  after = after.apply(after.tr.insertText("dd"));
+  expect(after.doc.textContent).toBe("ddd");
+  expect(after.doc.firstChild!.firstChild!.marks[0]!.type.name).toBe(
+    "emphasis",
+  );
+});
+it("does not normalize pairs ahead of the caret or explicit escaped/code content", () => {
+  const parse = vi.fn(() => null);
+  for (const before of [
+    state("*d*", "code_block", false, 2),
+    state("*d*", "paragraph", true, 2),
+    state("\\*d\\*", "paragraph", false, 3),
+  ])
+    expect(normalizeEnclosedEmphasis(before, parse)).toBeNull();
+  expect(parse).not.toHaveBeenCalled();
+  expect(
+    normalizeEnclosedEmphasis(state("*d*", "paragraph", false, 0), parse),
+  ).toBeNull();
+  expect(parse).not.toHaveBeenCalled();
 });

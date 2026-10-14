@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import { createReadStream } from "node:fs";
-import { createHash, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import path from "node:path";
@@ -38,63 +38,34 @@ async function fingerprint(root) {
     records: JSON.stringify(records.sort((a, b) => a[0].localeCompare(b[0]))),
   };
 }
-let totalOriginalBytes = 0;
-let totalArchiveBytes = 0;
-let archived = 0;
+let removed = 0;
+let removedBytes = 0;
 await fs.mkdir(directory, { recursive: true });
+const running = await run("ps", ["-axo", "comm"]);
 for (const entry of await fs.readdir(directory, { withFileTypes: true })) {
-  if (
-    !entry.isDirectory() ||
-    !/^Chomy-before-\d+\.\d+\.\d+-\d+\.app$/.test(entry.name)
-  )
+  if (!/^Chomy-before-\d+\.\d+\.\d+-\d+\.app(?:\.zip)?$/.test(entry.name))
     continue;
+  // Never follow symlinks or remove unexpected entries, release packages or user data.
+  const isBundle = entry.isDirectory() && entry.name.endsWith(".app");
+  const isArchive = entry.isFile() && entry.name.endsWith(".app.zip");
+  if (!isBundle && !isArchive) continue;
   const source = path.join(directory, entry.name);
-  const output = source + ".zip";
-  try {
-    await fs.lstat(output);
-    throw Error("Backup archive already exists; refusing to overwrite");
-  } catch (error) {
-    if (error.code !== "ENOENT") throw error;
-  }
-  const running = await run("ps", ["-axo", "comm"]);
   if (
+    isBundle &&
     running.stdout
       .split("\n")
       .some((command) => command.startsWith(source + path.sep))
   )
-    throw Error("Backup application is running; original retained");
-  await assertPortableMacBundle(source);
-  const before = await fingerprint(source);
-  const temporary = output + ".tmp-" + randomUUID();
-  const restored = await fs.mkdtemp(
-    path.join(os.tmpdir(), "chomy-backup-verify-"),
-  );
-  try {
-    await run(
-      "ditto",
-      ["-c", "-k", "--sequesterRsrc", "--keepParent", source, temporary],
-      { timeout: 180000 },
-    );
-    await run("ditto", ["-x", "-k", temporary, restored], { timeout: 180000 });
-    const recovered = path.join(restored, entry.name);
-    await assertPortableMacBundle(recovered);
-    if ((await fingerprint(recovered)).records !== before.records)
-      throw Error("Archive restore differs from backup; original retained");
-    await fs.rename(temporary, output);
-    totalArchiveBytes += (await fs.stat(output)).size;
-    totalOriginalBytes += before.bytes;
-    // Only our generated backup is removed, after complete byte/mode/link verification.
-    await fs.rm(source, { recursive: true });
-    archived++;
-    console.log(`Archived and verified ${entry.name}`);
-  } finally {
-    await fs.rm(temporary, { force: true });
-    await fs.rm(restored, { recursive: true, force: true });
-  }
+    throw Error("Backup application is running; retained");
+  const bytes = isBundle
+    ? (await fingerprint(source)).bytes
+    : (await fs.stat(source)).size;
+  await fs.rm(source, { recursive: isBundle });
+  removedBytes += bytes;
+  removed++;
+  console.log(`Removed old backup ${entry.name}`);
 }
-console.log(
-  JSON.stringify({ archived, totalOriginalBytes, totalArchiveBytes }),
-);
+console.log(JSON.stringify({ removed, removedBytes }));
 
 if (process.argv.includes("--build")) {
   const root = path.resolve(import.meta.dirname, "..");
@@ -130,7 +101,7 @@ if (process.argv.includes("--build")) {
     await fs.rm(source, { recursive: true });
     console.log(
       JSON.stringify({
-        archivedBuild: true,
+        removedBuild: true,
         removedBuildBytes: before.bytes,
         retainedReleaseZip: path.relative(root, archive),
       }),

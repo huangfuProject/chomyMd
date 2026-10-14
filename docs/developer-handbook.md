@@ -486,6 +486,8 @@ afterExtract 在 Electron 解压的临时目录中按目标平台裁剪语言包
 
 DMG 使用 hdiutil 的 ULMO/LZMA 压缩，生成后验证并只读挂载运行安装回归；ZIP 保留跨平台发行方式。应用底层仍携带 Electron，单独的框架二进制约 192 MiB，因此 40 MB 目标需要另行评估运行时架构，不能靠缩减业务代码达到。
 
-`node scripts/archive-mac-backups.mjs` 只处理 out/installed-backups 中符合生成命名规则的旧应用目录。先检查没有从该目录运行的进程，再压缩并解压至临时目录，逐文件核对 SHA-256、权限及符号链接，验证可移植性；全部一致才移除原应用副本。失败保留原目录。可用 `ditto -x -k <backup.app.zip> <restore-directory>` 恢复完整应用；用户图片、恢复记录和云配置不在这些应用备份中，脚本不处理用户数据。
+按当前维护约定，不再长期保留旧安装应用或其压缩备份。`node scripts/cleanup-mac-artifacts.mjs` 删除 out/installed-backups 中符合 Chomy-before-版本-时间戳.app（或 .app.zip）命名规则的旧备份；跳过符号链接、其他名称及类型，旧应用仍在运行则拒绝删除。脚本不会处理正式发行包或用户数据。更新安装时，旧应用仅可作为安装事务的临时回退副本，安装和启动验证成功后应立即删除；失败时恢复旧应用并保留恢复所需内容。
 
-使用 `--build` 参数还会校验本版本发行 ZIP 的完整解压副本，确认文件、权限及链接与开发构建逐项一致后，移除开发目录里的重复 Chomy.app。请在安装及所有发行验证完成之后运行。需要直接运行开发打包副本时，可用 `ditto -x -k apps/desktop/out/make/zip/darwin/arm64/Chomy-darwin-arm64-<version>.zip apps/desktop/out/Chomy-darwin-arm64` 恢复，或重新 `pnpm make`。DMG 安装回归兼容开发副本已归档的状态；产物摘要记录归档前构建的原始文件。
+回滚通过 Git 版本重新构建。在没有未提交修改的工作区执行 `git switch --detach v<version>`（用 `git tag --list` 查询实际标签），再执行 `pnpm install --frozen-lockfile` 和 `pnpm make`，生成该版本的 macOS 安装包；Windows 便携包使用 `pnpm package:win`，仍需 Windows 实机验证。完成后用 `git switch main` 回到主分支，并重新安装当前锁文件依赖。存在未提交修改时应先提交，或在独立 Git worktree 构建旧版本，不能为回滚丢弃当前工作。版本回滚只重新构建应用，不清理用户图片、恢复记录或云配置；较旧版本的数据格式兼容性需单独核对。
+
+使用 `node scripts/cleanup-mac-artifacts.mjs --build`还会校验本版本发行 ZIP 的完整解压副本，确认文件、权限及链接与开发构建逐项一致后，移除开发目录里的重复 Chomy.app。请在安装及所有发行验证完成之后运行。需要直接运行开发打包副本时，可用 `ditto -x -k apps/desktop/out/make/zip/darwin/arm64/Chomy-darwin-arm64-<version>.zip apps/desktop/out/Chomy-darwin-arm64` 恢复，或重新 `pnpm make`。DMG 安装回归兼容开发副本已清理的状态；产物摘要记录清理前构建的原始文件。

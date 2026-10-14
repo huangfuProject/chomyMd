@@ -319,44 +319,128 @@ test("file switching blocks late input until the new document session is ready",
     await fs.rm(directory, { recursive: true, force: true });
   }
 });
-test("pasting an image into a new document first chooses a Markdown location and copies the image", async () => {
+test("clipboard screenshots persist without saving, survive recovery and keep absolute paths after save", async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "chomy-paste-"));
   const filename = path.join(directory, "new.md");
-  const app = await launch(directory);
+  let app = await launch(directory);
   try {
-    const page = await app.firstWindow();
+    let page = await app.firstWindow();
     await dialogs(app, filename);
-    await page.locator(".ProseMirror").fill("New document");
-    await page.locator(".ProseMirror").evaluate((root) => {
-      const bytes = Uint8Array.from(
-        atob(
-          "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aV8sAAAAASUVORK5CYII=",
-        ),
-        (char) => char.charCodeAt(0),
-      );
-      const data = new DataTransfer();
-      data.items.add(new File([bytes], "clipboard.png", { type: "image/png" }));
-      root.dispatchEvent(
-        new ClipboardEvent("paste", {
-          clipboardData: data,
-          bubbles: true,
-          cancelable: true,
-        }),
-      );
+    await app.evaluate(({ dialog }) => {
+      dialog.showSaveDialog = async () => {
+        throw Error("Screenshots must not ask to save");
+      };
     });
+    await page.locator(".ProseMirror").fill("New document");
+    const paste = async () =>
+      page.locator(".ProseMirror").evaluate((root) => {
+        const bytes = Uint8Array.from(
+          atob(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aV8sAAAAASUVORK5CYII=",
+          ),
+          (char) => char.charCodeAt(0),
+        );
+        const data = new DataTransfer();
+        data.items.add(
+          new File([bytes], "clipboard.png", { type: "image/png" }),
+        );
+        root.dispatchEvent(
+          new ClipboardEvent("paste", {
+            clipboardData: data,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+      });
+    const images = () => page.locator('.ProseMirror img[alt^="image-"]');
+    await paste();
     await expect
       .poll(async () =>
-        page
-          .getByRole("img", { name: "粘贴图片.png", exact: true })
+        images()
+          .first()
           .evaluate((img: HTMLImageElement) => img.naturalWidth),
       )
       .toBe(1);
-    expect(await fs.readFile(filename, "utf8")).toContain("New document");
-    expect(await fs.readdir(path.join(directory, "assets"))).toHaveLength(1);
+    await paste();
+    await expect(images()).toHaveCount(2);
+    await expect
+      .poll(async () =>
+        images()
+          .nth(1)
+          .evaluate((img: HTMLImageElement) => img.naturalWidth),
+      )
+      .toBe(1);
+    expect((await page.evaluate(() => window.chomy.status())).saved).toBe(
+      false,
+    );
+    const imageDirectory = path.join(directory, "data", "user-images");
+    const stored = await fs.readdir(imageDirectory);
+    expect(stored).toHaveLength(2);
+    for (const image of stored)
+      expect(image).toMatch(/^image-\d{17}-[a-f0-9]{8}\.png$/);
+    expect(await fs.readdir(directory)).not.toContain("new.md");
+    await expect
+      .poll(async () => {
+        const files = await fs.readdir(
+          path.join(directory, "data", "recovery"),
+        );
+        for (const file of files) {
+          const data = JSON.parse(
+            await fs.readFile(
+              path.join(directory, "data", "recovery", file),
+              "utf8",
+            ),
+          );
+          if (stored.every((image) => data.document.markdown.includes(image)))
+            return true;
+        }
+        return false;
+      })
+      .toBe(true);
+    await stop(app);
+    app = await launch(directory);
+    page = await app.firstWindow();
+    await page.getByRole("button", { name: "恢复", exact: true }).click();
+    await expect(images()).toHaveCount(2);
+    await expect
+      .poll(async () =>
+        images()
+          .first()
+          .evaluate((img: HTMLImageElement) => img.naturalWidth),
+      )
+      .toBe(1);
+    await dialogs(app, filename);
     await clickAction(page, "保存");
     await expect
-      .poll(async () => fs.readFile(filename, "utf8"))
-      .toContain("./assets/");
+      .poll(async () => fs.readFile(filename, "utf8").catch(() => ""))
+      .toContain("file:///");
+    const saved = await fs.readFile(filename, "utf8");
+    for (const image of stored) expect(saved).toContain(image);
+    expect(saved).toContain("New document");
+    expect(await fs.readdir(directory)).not.toContain("assets");
+    await clickAction(page, "阅读");
+    await expect
+      .poll(async () =>
+        page
+          .locator(".reading-preview img")
+          .first()
+          .evaluate((img: HTMLImageElement) => img.naturalWidth),
+      )
+      .toBe(1);
+    await stop(app);
+    app = await launch(directory);
+    page = await app.firstWindow();
+    await dialogs(app, filename);
+    await clickAction(page, "打开");
+    await expect(images()).toHaveCount(2);
+    await expect
+      .poll(async () =>
+        images()
+          .nth(1)
+          .evaluate((img: HTMLImageElement) => img.naturalWidth),
+      )
+      .toBe(1);
+    expect(await fs.readFile(filename, "utf8")).toBe(saved);
   } finally {
     await stop(app);
     await fs.rm(directory, { recursive: true, force: true });

@@ -55,16 +55,67 @@ export class Assets {
     const directory = await this.documents.assetRoot();
     const safe = `${randomUUID()}-${safeFilename(name)}`;
     await fs.writeFile(path.join(directory, safe), bytes, { flag: "wx" });
+    return this.finish(
+      bytes,
+      name,
+      safe,
+      path.join(directory, safe),
+      "./assets/" + encodeURIComponent(safe),
+      id,
+    );
+  }
+  async storeClipboard(
+    bytes: Buffer,
+    mime: "image/png" | "image/jpeg" | "image/webp",
+    id = this.documents.snapshot.id,
+  ) {
+    if (!bytes.length || bytes.length > 20 * 1024 * 1024)
+      throw new ChomyError("ASSET_SIZE", "截图必须非空且小于 20 MB。");
+    if (id !== this.documents.snapshot.id)
+      throw new ChomyError("SESSION_CHANGED", "文档已切换，未插入截图。");
+    const directory = path.join(this.documents.dataDirectory, "user-images");
+    await fs.mkdir(directory, { recursive: true });
+    const now = new Date();
+    const timestamp = [
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, "0"),
+      String(now.getDate()).padStart(2, "0"),
+      String(now.getHours()).padStart(2, "0"),
+      String(now.getMinutes()).padStart(2, "0"),
+      String(now.getSeconds()).padStart(2, "0"),
+      String(now.getMilliseconds()).padStart(3, "0"),
+    ].join("");
+    const name = `image-${timestamp}-${randomUUID().slice(0, 8)}.${mime.split("/")[1]}`;
+    const filename = path.join(directory, name);
+    await fs.writeFile(filename, bytes, { flag: "wx" });
+    const url = await this.documents.run(async () => {
+      if (id !== this.documents.snapshot.id)
+        throw new ChomyError(
+          "SESSION_CHANGED",
+          "文档已切换；截图文件仍保留在图片目录。",
+        );
+      return this.documents.referenceAsset(filename, true);
+    });
+    return this.finish(bytes, name, name, filename, url, id);
+  }
+  private async finish(
+    bytes: Buffer,
+    name: string,
+    safe: string,
+    filename: string,
+    localUrl: string,
+    id: string,
+  ) {
     const mime =
       imageExtensions.get(path.extname(name).toLowerCase()) ??
       "application/octet-stream";
-    let url = "./assets/" + encodeURIComponent(safe);
+    let url = localUrl;
     if (this.preferences.preferences.assetMode === "cloud") {
       const config = this.preferences.cloud;
       if (!config)
         throw new ChomyError(
           "CLOUD_CONFIG",
-          "请先配置云存储；附件已保留在本地 assets 目录。",
+          "请先配置云存储；附件本地副本仍保留。",
         );
       const key = [
         config.prefix.replace(/^\/+|\/+$/g, ""),
@@ -73,7 +124,7 @@ export class Assets {
       ]
         .filter(Boolean)
         .join("/");
-      this.pending = { id, path: path.join(directory, safe), name, key, mime };
+      this.pending = { id, path: filename, name, key, mime };
       url = await this.cloud.upload(config, key, bytes, mime);
       this.pending = null;
     }

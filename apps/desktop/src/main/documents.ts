@@ -374,11 +374,12 @@ export class Documents {
       JSON.stringify(this.assetGrants),
     );
   }
-  async referenceAsset(filename: string) {
+  async referenceAsset(filename: string, absolute = false) {
     const real = await fs.realpath(filename);
-    const relative = this.filename
-      ? path.relative(path.dirname(this.filename), real)
-      : null;
+    const relative =
+      this.filename && !absolute
+        ? path.relative(path.dirname(this.filename), real)
+        : null;
     const rawSource =
       relative !== null && !path.isAbsolute(relative)
         ? relative.split(path.sep).map(encodeURIComponent).join("/")

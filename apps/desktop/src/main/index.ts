@@ -503,14 +503,10 @@ async function execute(request: AppRequest): Promise<unknown> {
       await documents.run(() =>
         documents.update(request.id, request.markdown, request.revision),
       );
-      if (!documents.filePath && !(await documents.run(() => chooseSave())))
-        throw new ChomyError(
-          "SAVE_CANCELLED",
-          "未选择文档位置，粘贴图片未写入；文档仍保留。",
-        );
-      return assets.store(
+      return assets.storeClipboard(
         Buffer.from(request.bytes),
-        "粘贴图片." + request.mime.split("/")[1],
+        request.mime,
+        request.id,
       );
     }
     case "export":

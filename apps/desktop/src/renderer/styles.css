@@ -219,6 +219,7 @@ summary::-webkit-details-marker {
   -webkit-app-region: drag;
 }
 .sidebar-header {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -237,15 +238,14 @@ summary::-webkit-details-marker {
   padding: 4px;
   cursor: pointer;
 }
-.sidebar-header > span {
-  position: absolute;
-  left: 0;
-  width: 320px;
-  text-align: center;
-  pointer-events: none;
-}
 .sidebar-menu {
-  position: relative;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.sidebar-menu .chrome-popover {
+  left: 50%;
+  transform: translateX(-50%);
 }
 .sidebar-menu nav {
   display: block;
@@ -876,4 +876,8 @@ summary::-webkit-details-marker {
 .dark-shell .header-controls button[aria-pressed="true"] {
   color: inherit;
   background: transparent;
+}
+
+.source-toggle[aria-pressed="true"] .ui-icon {
+  fill: currentColor;
 }

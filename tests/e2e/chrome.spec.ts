@@ -2,10 +2,16 @@ import { test, expect } from "@playwright/test";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { launch, stop, clickAction } from "./helpers";
+import { launch, stop, clickAction, dialogs } from "./helpers";
 
 test("minimal chrome keeps sidebar, menus and document controls usable", async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "chomy-chrome-"));
+  const folder = path.join(directory, "docs");
+  await fs.mkdir(path.join(folder, "nested"), { recursive: true });
+  const filename = path.join(folder, "current.md");
+  await fs.writeFile(filename, "");
+  await fs.writeFile(path.join(folder, "sibling.md"), "# Sibling\n");
+  await fs.writeFile(path.join(folder, "nested", "child.md"), "# Child\n");
   const app = await launch(directory);
   try {
     const page = await app.firstWindow();
@@ -87,10 +93,46 @@ test("minimal chrome keeps sidebar, menus and document controls usable", async (
       zoomout: "缩小",
       togglefullscreen: "切换全屏",
     });
-    await clickAction(page, "源码");
+    await dialogs(app, filename);
+    await clickAction(page, "打开");
+    await expect(page.locator(".document-title")).toHaveText("current.md");
+    await app.evaluate(({ dialog }) => {
+      dialog.showOpenDialog = async () => {
+        throw new Error("Saved document tree must not open a folder chooser.");
+      };
+    });
+    await page
+      .getByRole("button", { name: "显示当前文件夹文件树", exact: true })
+      .click();
+    await expect(page.locator(".file-list")).toContainText("sibling.md");
+    await expect(page.locator(".file-list")).toContainText("child.md");
+    await expect(page.locator(".sidebar-menu summary")).toHaveText("文件");
+    await page.getByRole("button", { name: "显示大纲", exact: true }).click();
+    await expect(page.locator(".sidebar-empty")).toHaveText("大纲内容为空");
+    expect(
+      await page
+        .locator(".header-controls")
+        .evaluate((element) =>
+          Array.from(
+            element.children,
+            (child) => child.getAttribute("aria-label") ?? child.className,
+          ),
+        ),
+    ).toEqual(["statistics", "切换源码模式", "显示大纲", "显示或隐藏侧栏"]);
+    await page
+      .getByRole("button", { name: "切换源码模式", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "切换源码模式", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
     await page.locator(".cm-content").click();
     await page.keyboard.insertText("# 第一节\n\n## 第二节");
-    await clickAction(page, "源码");
+    await page
+      .getByRole("button", { name: "切换源码模式", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "切换源码模式", exact: true }),
+    ).toHaveAttribute("aria-pressed", "false");
     await expect(page.locator(".document-state")).toHaveText("— 已编辑");
     await expect(page.locator(".outline button")).toHaveCount(2);
     await page.getByRole("button", { name: "搜索侧栏", exact: true }).click();

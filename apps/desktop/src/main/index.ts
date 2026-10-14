@@ -59,6 +59,7 @@ app.on("second-instance", (_event, argv) => {
   if (pendingFile) send("open-pending");
 });
 let mainWindow: BrowserWindow | null = null;
+let browsedDirectory: string | null = null;
 let canClose = false;
 let quitting = false;
 let documents: Documents;
@@ -380,13 +381,23 @@ async function execute(request: AppRequest): Promise<unknown> {
         else mainWindow?.close();
       } else quitting = false;
       return undefined;
+    case "currentFolder":
     case "folder": {
-      const result = await dialog.showOpenDialog(mainWindow!, {
-        properties: ["openDirectory"],
-      });
-      return result.canceled || !result.filePaths[0]
-        ? []
-        : documents.folder(result.filePaths[0]);
+      let directory =
+        request.action === "currentFolder"
+          ? documents.filePath
+            ? path.dirname(documents.filePath)
+            : browsedDirectory
+          : null;
+      if (!directory) {
+        const result = await dialog.showOpenDialog(mainWindow!, {
+          properties: ["openDirectory"],
+        });
+        if (result.canceled || !result.filePaths[0]) return [];
+        directory = result.filePaths[0];
+      }
+      browsedDirectory = directory;
+      return documents.folder(directory);
     }
     case "recent":
       return preferences.recent((file) => documents.register(file));

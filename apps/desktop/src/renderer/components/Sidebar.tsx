@@ -88,6 +88,7 @@ export function Sidebar({
   onHeading,
   onOpen,
   onFolder,
+  onFileTree,
 }: {
   mode: "outline" | "files" | "recent";
   onMode: (value: "outline" | "files" | "recent") => void;
@@ -97,6 +98,7 @@ export function Sidebar({
   onHeading: (index: number) => void;
   onOpen: (entry: FileEntry) => void;
   onFolder: () => void;
+  onFileTree: () => void;
 }) {
   const [selected, setSelected] = useState(-1);
   const [searching, setSearching] = useState(false);
@@ -107,6 +109,16 @@ export function Sidebar({
     <aside className="sidebar">
       <div className="window-controls-space" />
       <header className="sidebar-header">
+        <button
+          aria-label="显示当前文件夹文件树"
+          title="文件树"
+          onClick={() => {
+            setQuery("");
+            onFileTree();
+          }}
+        >
+          <Icon name="tree" />
+        </button>
         <details
           className="sidebar-menu"
           onClick={(event) => {
@@ -115,7 +127,7 @@ export function Sidebar({
           }}
         >
           <summary aria-label="切换侧栏视图" title="切换侧栏视图">
-            <Icon name="tree" />
+            {{ outline: "大纲", files: "文件", recent: "最近" }[mode]}
           </summary>
           <nav className="chrome-popover" aria-label="侧栏视图">
             {(["outline", "files", "recent"] as const).map((tab) => (
@@ -132,7 +144,6 @@ export function Sidebar({
             ))}
           </nav>
         </details>
-        <span>{{ outline: "大纲", files: "文件", recent: "最近" }[mode]}</span>
         <button
           aria-label="搜索侧栏"
           title="搜索"

@@ -173,6 +173,7 @@ export const requestSchema = z.discriminatedUnion("action", [
         "asset",
         "retryAsset",
         "folder",
+        "currentFolder",
         "recent",
         "themes",
         "cloudTest",
@@ -253,6 +254,7 @@ export interface ChomyApi {
   status(): Promise<DocumentSnapshot>;
   confirmClose(): Promise<void>;
   openFolder(): Promise<FileEntry[]>;
+  currentFolder(): Promise<FileEntry[]>;
   recent(): Promise<FileEntry[]>;
   restore(id: string): Promise<DocumentSnapshot | null>;
   discardRecovery(id: string): Promise<void>;

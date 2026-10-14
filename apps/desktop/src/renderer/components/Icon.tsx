@@ -1,4 +1,5 @@
 const paths = {
+  source: "M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18",
   tree: "M3 3h14v5H3zM8 10h13v5H8zM8 17h13v4H8zM3 7h2v12h3v2H3z",
   search: "M10 3a7 7 0 1 0 0 14a7 7 0 1 0 0-14M15 15l6 6",
   outline:

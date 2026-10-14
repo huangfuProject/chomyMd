@@ -51,6 +51,7 @@ const api: ChomyApi = Object.freeze<ChomyApi>({
   status: () => invoke({ action: "status" }, documentSchema),
   confirmClose: () => invoke({ action: "confirmClose" }, z.undefined()),
   openFolder: () => invoke({ action: "folder" }, entries),
+  currentFolder: () => invoke({ action: "currentFolder" }, entries),
   recent: () => invoke({ action: "recent" }, entries),
   restore: (id) => invoke({ action: "restore", id }, doc),
   discardRecovery: (id) =>

@@ -216,8 +216,10 @@ export function App() {
           ? editor.current?.getMarkdown()
           : undefined;
       if (live !== undefined) state.change(live);
-      if (reason) setNotice(reason);
-      else {
+      if (reason) {
+        setNotice(reason);
+        setPreview(false);
+      } else {
         setSource(!source);
         setPreview(false);
       }
@@ -325,8 +327,12 @@ export function App() {
       } else if (command === "save" || command === "saveAs") {
         state.adopt(await window.chomy.save(command === "saveAs"));
         await refreshRecent();
-      } else if (command === "folder") {
-        setFiles(await window.chomy.openFolder());
+      } else if (command === "folder" || command === "current-folder") {
+        setFiles(
+          await (command === "folder"
+            ? window.chomy.openFolder()
+            : window.chomy.currentFolder()),
+        );
         setSidebar("files");
         setShowSidebar(true);
       } else if (command === "image") await asset();
@@ -503,13 +509,16 @@ export function App() {
       {showSidebar && (
         <Sidebar
           mode={sidebar}
-          onMode={setSidebar}
+          onMode={(mode) =>
+            mode === "files" ? action("current-folder") : setSidebar(mode)
+          }
           outline={outline}
           files={files}
           recent={data?.recent ?? []}
           onHeading={(index) => editor.current?.jumpToHeading(index)}
           onOpen={openEntry}
           onFolder={() => action("folder")}
+          onFileTree={() => action("current-folder")}
         />
       )}
       <div className="editor-column">
@@ -604,6 +613,16 @@ export function App() {
                 </p>
               </div>
             </details>
+            <button
+              className="icon-button source-toggle"
+              aria-label="切换源码模式"
+              title="源码模式（⌘/ / Ctrl+/）"
+              aria-pressed={effectiveSource && !preview}
+              disabled={editorLocked}
+              onClick={() => action("source")}
+            >
+              <Icon name="source" />
+            </button>
             <button
               className="icon-button"
               aria-label="显示大纲"

@@ -217,10 +217,11 @@ export function App() {
           : undefined;
       if (live !== undefined) state.change(live);
       if (reason) {
-        setNotice(reason);
-        setPreview(false);
+        // Protected Markdown retains its source editor; the same control opens
+        // the rendered reading view instead of trying an unsafe rich round-trip.
+        setPreview(!preview);
       } else {
-        setSource(!source);
+        setSource(preview ? true : !source);
         setPreview(false);
       }
       return;
@@ -578,7 +579,7 @@ export function App() {
               </button>
               <button
                 disabled={editorLocked}
-                aria-pressed={effectiveSource}
+                aria-pressed={effectiveSource && !preview}
                 onClick={() => action("source")}
               >
                 源码
@@ -611,7 +612,8 @@ export function App() {
                     : document.saved
                       ? "已保存"
                       : "新文档"}{" "}
-                  · {effectiveSource ? "源码" : "可视编辑"}
+                  ·{" "}
+                  {preview ? "阅读预览" : effectiveSource ? "源码" : "可视编辑"}
                 </p>
                 <p>
                   {document.markdown.length.toLocaleString()} 字符 ·{" "}
@@ -622,7 +624,11 @@ export function App() {
             <button
               className="icon-button source-toggle"
               aria-label="切换源码模式"
-              title="源码模式（⌘/ / Ctrl+/）"
+              title={
+                reason
+                  ? "源码 / 阅读预览（⌘/ / Ctrl+/）"
+                  : "源码模式（⌘/ / Ctrl+/）"
+              }
               aria-pressed={effectiveSource && !preview}
               disabled={editorLocked}
               onClick={() => action("source")}
@@ -943,7 +949,7 @@ export function App() {
                 } as React.CSSProperties
               }
             >
-              {reason && <p className="source-reason">{reason}</p>}
+              {reason && !preview && <p className="source-reason">{reason}</p>}
               <div hidden={preview}>
                 <EditorPane
                   resetVersion={state.resetVersion}

@@ -21,6 +21,7 @@ const settingsSchema = z.object({
   preferences: preferencesSchema,
   recent: z.array(z.string()).max(20),
   cloud: cloudSchema.nullable(),
+  lastDirectory: z.string().nullable().optional(),
 });
 export const defaultPreferences: Preferences = {
   theme: "chomy-light",
@@ -50,6 +51,7 @@ const darkCss =
 export class PreferencesService {
   preferences = { ...defaultPreferences };
   recentPaths: string[] = [];
+  lastDirectory: string | null = null;
   cloud: CloudConfig | null = null;
   constructor(readonly directory: string) {}
   async initialize() {
@@ -63,6 +65,7 @@ export class PreferencesService {
       this.preferences = value.preferences;
       this.recentPaths = value.recent;
       this.cloud = value.cloud;
+      this.lastDirectory = value.lastDirectory ?? null;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT")
         throw new ChomyError(
@@ -85,6 +88,7 @@ export class PreferencesService {
           preferences: this.preferences,
           recent: this.recentPaths,
           cloud: this.cloud,
+          lastDirectory: this.lastDirectory,
         },
         null,
         2,

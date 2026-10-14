@@ -32,7 +32,13 @@ export const documentSchema = z
   .strict();
 export type DocumentSnapshot = z.infer<typeof documentSchema>;
 export const fileEntrySchema = z
-  .object({ id, name: z.string(), relative: z.string() })
+  .object({
+    id,
+    name: z.string(),
+    relative: z.string(),
+    kind: z.enum(["file", "directory"]).optional(),
+    editable: z.boolean().optional(),
+  })
   .strict();
 export type FileEntry = z.infer<typeof fileEntrySchema>;
 export const themeSchema = z

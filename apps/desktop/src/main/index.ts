@@ -387,7 +387,11 @@ async function execute(request: AppRequest): Promise<unknown> {
         request.action === "currentFolder"
           ? documents.filePath
             ? path.dirname(documents.filePath)
-            : browsedDirectory
+            : (browsedDirectory ??
+              preferences.lastDirectory ??
+              (preferences.recentPaths[0]
+                ? path.dirname(preferences.recentPaths[0])
+                : app.getPath("documents")))
           : null;
       if (!directory) {
         const result = await dialog.showOpenDialog(mainWindow!, {
@@ -396,8 +400,18 @@ async function execute(request: AppRequest): Promise<unknown> {
         if (result.canceled || !result.filePaths[0]) return [];
         directory = result.filePaths[0];
       }
+      if (request.action === "currentFolder") {
+        try {
+          await fs.access(directory);
+        } catch {
+          directory = app.getPath("documents");
+        }
+      }
+      const entries = await documents.folder(directory);
       browsedDirectory = directory;
-      return documents.folder(directory);
+      preferences.lastDirectory = directory;
+      await preferences.persist();
+      return entries;
     }
     case "recent":
       return preferences.recent((file) => documents.register(file));

@@ -305,10 +305,19 @@ export class Documents {
     return { id, name: path.basename(filename), relative };
   }
   async folder(directory: string) {
-    const result: FileEntry[] = [];
+    const result: FileEntry[] = [
+      {
+        id: hash(directory).slice(0, 32),
+        name: path.basename(directory) || directory,
+        relative: ".",
+        kind: "directory",
+        editable: false,
+      },
+    ];
     const visit = async (dir: string, depth: number) => {
       if (depth > 6 || result.length >= 2000) return;
       for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
+        if (result.length >= 2000) break;
         if (
           entry.name.startsWith(".") ||
           entry.name === "node_modules" ||
@@ -316,9 +325,26 @@ export class Documents {
         )
           continue;
         const full = path.join(dir, entry.name);
-        if (entry.isDirectory()) await visit(full, depth + 1);
-        else if (entry.isFile() && /\.(md|markdown|txt)$/i.test(entry.name))
-          result.push(this.register(full, path.relative(directory, full)));
+        const relative = path.relative(directory, full);
+        if (entry.isDirectory()) {
+          result.push({
+            id: hash(full).slice(0, 32),
+            name: entry.name,
+            relative,
+            kind: "directory",
+            editable: false,
+          });
+          await visit(full, depth + 1);
+        } else if (entry.isFile()) {
+          const editable = /\.(md|markdown|txt)$/i.test(entry.name);
+          result.push({
+            ...(editable
+              ? this.register(full, relative)
+              : { id: hash(full).slice(0, 32), name: entry.name, relative }),
+            kind: "file",
+            editable,
+          });
+        }
       }
     };
     await visit(directory, 0);

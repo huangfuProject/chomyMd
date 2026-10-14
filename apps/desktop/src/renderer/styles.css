@@ -881,3 +881,15 @@ summary::-webkit-details-marker {
 .source-toggle[aria-pressed="true"] .ui-icon {
   fill: currentColor;
 }
+
+.folder-root {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.file-list button:disabled {
+  opacity: 0.7;
+}
+.folder-location-action {
+  font-size: 12px;
+}

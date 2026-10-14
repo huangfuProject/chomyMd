@@ -8,6 +8,8 @@ test("minimal chrome keeps sidebar, menus and document controls usable", async (
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "chomy-chrome-"));
   const folder = path.join(directory, "docs");
   await fs.mkdir(path.join(folder, "nested"), { recursive: true });
+  await fs.mkdir(path.join(folder, "empty"));
+  await fs.writeFile(path.join(folder, "photo.png"), "not an editable file");
   const filename = path.join(folder, "current.md");
   await fs.writeFile(filename, "");
   await fs.writeFile(path.join(folder, "sibling.md"), "# Sibling\n");
@@ -106,6 +108,12 @@ test("minimal chrome keeps sidebar, menus and document controls usable", async (
       .click();
     await expect(page.locator(".file-list")).toContainText("sibling.md");
     await expect(page.locator(".file-list")).toContainText("child.md");
+    await expect(page.locator(".file-list")).toContainText("empty");
+    await expect(page.locator(".file-list")).toContainText("photo.png");
+    await expect(
+      page.getByRole("button", { name: "photo.png", exact: true }),
+    ).toBeDisabled();
+    await expect(page.locator(".folder-root")).toHaveText("docs");
     await expect(page.locator(".sidebar-menu summary")).toHaveText("文件");
     await page.getByRole("button", { name: "显示大纲", exact: true }).click();
     await expect(page.locator(".sidebar-empty")).toHaveText("大纲内容为空");
@@ -177,4 +185,59 @@ test("minimal chrome keeps sidebar, menus and document controls usable", async (
     await stop(app);
     await fs.rm(directory, { recursive: true, force: true });
   }
+});
+
+test("untitled documents browse the remembered directory without a chooser after restart", async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "chomy-browser-"));
+  const folder = path.join(directory, "workspace");
+  await fs.mkdir(folder);
+  await fs.mkdir(path.join(folder, "empty"));
+  await fs.writeFile(path.join(folder, "notes.md"), "# Notes\n");
+  await fs.writeFile(path.join(folder, "picture.png"), "image placeholder");
+  const data = path.join(directory, "data");
+  await fs.mkdir(data);
+  await fs.writeFile(
+    path.join(data, "settings.json"),
+    JSON.stringify({
+      schemaVersion: 1,
+      preferences: {
+        theme: "chomy-light",
+        autosave: false,
+        fontSize: 16,
+        contentWidth: 960,
+        assetMode: "local",
+        remoteImages: false,
+      },
+      recent: [],
+      cloud: null,
+    }),
+  );
+  for (let index = 0; index < 2; index++) {
+    const app = await launch(directory);
+    try {
+      const page = await app.firstWindow();
+      await expect(page.locator(".ProseMirror")).toBeVisible();
+      if (index === 0)
+        await app.evaluate(
+          ({ app }, folder) => app.setPath("documents", folder),
+          folder,
+        );
+      await app.evaluate(({ dialog }) => {
+        dialog.showOpenDialog = async () => {
+          throw Error("Current directory must never show a picker");
+        };
+      });
+      await page
+        .getByRole("button", { name: "显示当前文件夹文件树", exact: true })
+        .click();
+      await expect(page.locator(".file-list")).toContainText("notes.md");
+      await expect(page.locator(".file-list")).toContainText("empty");
+      await expect(page.locator(".file-list")).toContainText("picture.png");
+      await expect(page.locator(".folder-root")).toHaveText("workspace");
+      await expect(page.locator(".document-title")).toHaveText("未命名");
+    } finally {
+      await stop(app);
+    }
+  }
+  await fs.rm(directory, { recursive: true, force: true });
 });

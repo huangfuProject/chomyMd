@@ -10,6 +10,7 @@ interface TreeNode {
 function buildTree(entries: FileEntry[]) {
   const root: TreeNode = { name: "", key: "", children: new Map() };
   for (const entry of entries) {
+    if (entry.relative === ".") continue;
     let node = root;
     let key = "";
     const segments = entry.relative.replaceAll("\\", "/").split("/");
@@ -40,15 +41,21 @@ function FileTree({
     Array.from(node.children.values())
       .sort(
         (a, b) =>
-          Number(Boolean(a.entry)) - Number(Boolean(b.entry)) ||
+          Number(Boolean(a.entry && a.entry.kind !== "directory")) -
+            Number(Boolean(b.entry && b.entry.kind !== "directory")) ||
           a.name.localeCompare(b.name),
       )
       .map((child) =>
-        child.entry ? (
+        child.entry && child.entry.kind !== "directory" ? (
           <button
             key={child.key}
             aria-current={selected === child.key ? "page" : undefined}
-            title={child.key}
+            disabled={child.entry.editable === false}
+            title={
+              child.entry.editable === false
+                ? `${child.key}（非文本编辑文件）`
+                : child.key
+            }
             style={{ paddingLeft: 12 + depth * 14 }}
             onClick={() => {
               setSelected(child.key);
@@ -77,7 +84,14 @@ function FileTree({
           </div>
         ),
       );
-  return <div className="file-list">{render(tree, 0)}</div>;
+  return (
+    <div className="file-list">
+      <div className="folder-root">
+        {entries.find((entry) => entry.relative === ".")?.name}
+      </div>
+      {render(tree, 0)}
+    </div>
+  );
 }
 export function Sidebar({
   mode,
@@ -204,9 +218,13 @@ export function Sidebar({
           </div>
         ) : mode === "files" ? (
           <>
-            <button onClick={onFolder}>打开文件夹…</button>
+            <button className="folder-location-action" onClick={onFolder}>
+              切换目录…
+            </button>
             <FileTree
-              entries={files.filter((entry) => matches(entry.relative))}
+              entries={files.filter(
+                (entry) => entry.relative === "." || matches(entry.relative),
+              )}
               onOpen={onOpen}
             />
           </>

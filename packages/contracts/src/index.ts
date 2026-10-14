@@ -88,7 +88,7 @@ export const uploadStatusSchema = z
 export type UploadStatus = z.infer<typeof uploadStatusSchema>;
 export const cloudSchema = z
   .object({
-    provider: z.enum(["s3", "aliyun"]),
+    provider: z.enum(["s3", "aliyun", "qiniu"]),
     bucket: z.string().min(1).max(100),
     region: z.string().min(1).max(100),
     endpoint: z.string().max(500),
@@ -269,6 +269,7 @@ export interface ChomyApi {
   importThemeCss(): Promise<{ themes: ThemeManifest[]; omitted: number }>;
   removeTheme(id: string): Promise<ThemeManifest[]>;
   themeCss(id: string): Promise<string>;
+  hasSourceFile(file: File): boolean;
   insertDroppedAsset(file: File): Promise<{ id: string; markdown: string }>;
   retryAsset(): Promise<{ id: string; markdown: string }>;
   insertAsset(): Promise<{ id: string; markdown: string } | null>;

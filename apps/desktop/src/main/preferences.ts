@@ -28,7 +28,7 @@ export const defaultPreferences: Preferences = {
   autosave: false,
   fontSize: 16,
   contentWidth: 960,
-  assetMode: "local",
+  assetMode: "reference",
   remoteImages: false,
 };
 const builtins: ThemeManifest[] = [

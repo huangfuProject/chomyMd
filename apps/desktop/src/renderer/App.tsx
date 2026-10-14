@@ -439,9 +439,13 @@ export function App() {
     const item = Array.from(event.clipboardData.items).find((item) =>
       item.type.startsWith("image/"),
     );
-    if (!item) return;
-    const file = item.getAsFile();
-    if (!file || !["image/png", "image/jpeg", "image/webp"].includes(file.type))
+    const file = event.clipboardData.files[0] ?? item?.getAsFile();
+    if (!file) return;
+    const original = window.chomy.hasSourceFile(file);
+    if (
+      !original &&
+      !["image/png", "image/jpeg", "image/webp"].includes(file.type)
+    )
       return;
     event.preventDefault();
     void run(async () => {
@@ -453,15 +457,17 @@ export function App() {
       await state.flush();
       const current = state.current.current;
       if (!current) return;
-      const value = await window.chomy.pasteImage(
-        {
-          id: current.id,
-          markdown: current.markdown,
-          revision: current.revision,
-        },
-        Array.from(new Uint8Array(await file.arrayBuffer())),
-        file.type as "image/png" | "image/jpeg" | "image/webp",
-      );
+      const value = original
+        ? await window.chomy.insertDroppedAsset(file)
+        : await window.chomy.pasteImage(
+            {
+              id: current.id,
+              markdown: current.markdown,
+              revision: current.revision,
+            },
+            Array.from(new Uint8Array(await file.arrayBuffer())),
+            file.type as "image/png" | "image/jpeg" | "image/webp",
+          );
       if (value.id === state.current.current?.id)
         editor.current?.insertMarkdown(value.markdown);
     }, true);

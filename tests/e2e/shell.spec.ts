@@ -136,6 +136,9 @@ test("table edits, undo across modes, image archive, theme persistence and porta
     let page = await app.firstWindow();
     await clickAction(page, "打开");
     await expect(page.locator(".ProseMirror h1")).toHaveText("Advanced");
+    await clickAction(page, "偏好设置");
+    await page.getByLabel("插入方式").selectOption("local");
+    await page.getByRole("button", { name: "保存偏好", exact: true }).click();
     await page.locator(".ProseMirror p").click();
     await showTools(page);
     await page.getByRole("button", { name: "表格", exact: true }).click();

@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { pathToFileURL, fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import {
@@ -213,6 +214,13 @@ export class Documents {
         "保存失败，编辑内容和恢复快照仍保留。请检查磁盘或文件权限。",
       );
     }
+    // Persist authorization before changing the document identity or removing recovery.
+    // Absolute original references remain stable on first save and Save As.
+    const grants = this.assetGrants[this.grantKey()];
+    if (grants && target !== this.filename) {
+      this.assetGrants[target] = { ...this.assetGrants[target], ...grants };
+      await this.persistAssetGrants();
+    }
     this.filename = target;
     this.baseHash = hash(bytes);
     this.baseText = this.current.markdown;
@@ -357,44 +365,55 @@ export class Documents {
     await fs.mkdir(directory, { recursive: true });
     return directory;
   }
-  async referenceAsset(filename: string) {
-    if (!this.filename) throw new ChomyError("SAVE_FIRST", "请先保存文档。");
-    const real = await fs.realpath(filename);
-    const relative = path.relative(path.dirname(this.filename), real);
-    if (path.isAbsolute(relative))
-      throw new ChomyError("ASSET_VOLUME", "跨磁盘附件请使用复制策略。");
-    const source = relative.split(path.sep).map(encodeURIComponent).join("/");
-    const grants = Object.assign(
-      Object.create(null) as Record<string, string>,
-      this.assetGrants[this.filename] ?? {},
-    );
-    grants[source] = real;
-    this.assetGrants[this.filename] = grants;
+  private grantKey() {
+    return this.filename ?? `session:${this.current.id}`;
+  }
+  private async persistAssetGrants() {
     await atomicWrite(
       path.join(this.dataDirectory, "asset-grants.json"),
       JSON.stringify(this.assetGrants),
     );
+  }
+  async referenceAsset(filename: string) {
+    const real = await fs.realpath(filename);
+    const relative = this.filename
+      ? path.relative(path.dirname(this.filename), real)
+      : null;
+    const rawSource =
+      relative !== null && !path.isAbsolute(relative)
+        ? relative.split(path.sep).map(encodeURIComponent).join("/")
+        : pathToFileURL(real).href;
+    const source = rawSource.replace(/\(/g, "%28").replace(/\)/g, "%29");
+    const key = this.grantKey();
+    const grants = Object.assign(
+      Object.create(null) as Record<string, string>,
+      this.assetGrants[key] ?? {},
+    );
+    grants[source] = real;
+    this.assetGrants[key] = grants;
+    await this.persistAssetGrants();
     return source;
   }
   async grantedAsset(source: string) {
-    if (!this.filename) return null;
-    const granted = this.assetGrants[this.filename]?.[source];
+    const granted = this.assetGrants[this.grantKey()]?.[source];
     if (!granted) return null;
-    const candidate = path.resolve(
-      path.dirname(this.filename),
-      decodeURIComponent(source),
-    );
+    const candidate = /^file:/i.test(source)
+      ? fileURLToPath(source)
+      : this.filename
+        ? path.resolve(path.dirname(this.filename), decodeURIComponent(source))
+        : null;
+    if (!candidate) return null;
     return (await fs.realpath(candidate)) === granted ? granted : null;
   }
   async resolveAsset(url: string) {
-    if (!this.filename) return null;
     const parsed = new URL(url);
     if (parsed.hostname !== this.current.id) return null;
     const relative = decodeURIComponent(parsed.pathname).replace(/^\//, "");
     if (relative.includes("\0") || relative.includes("\\")) return null;
-    const base = path.dirname(this.filename);
     const source =
       parsed.pathname === "/reference" ? parsed.searchParams.get("ref") : null;
+    if (!source && !this.filename) return null;
+    const base = this.filename ? path.dirname(this.filename) : "";
     const target = source
       ? await this.grantedAsset(source)
       : path.resolve(base, relative);

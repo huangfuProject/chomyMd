@@ -18,7 +18,7 @@ export function unsupportedReason(markdown: string): string | null {
     /\$\$|\$[^$\n]+\$/.test(withoutCode)
   )
     return "文档含 HTML、公式或扩展语法，使用源码模式安全保留；可切换阅读预览。";
-  if (/\[[^\]]+\]\((?:javascript|data|file|vbscript):/i.test(withoutCode))
+  if (/\[[^\]]+\]\((?:javascript|data|vbscript):/i.test(withoutCode))
     return "文档含不安全链接协议，使用源码模式；阅读预览会移除危险链接。";
   return null;
 }
@@ -31,6 +31,8 @@ export function imageUrl(
     return remote
       ? `chomy-asset://${documentId}/remote?url=${encodeURIComponent(source)}`
       : "";
+  if (/^file:\/\//i.test(source))
+    return `chomy-asset://${documentId}/reference?ref=${encodeURIComponent(source)}`;
   if (/^(?:[a-z][a-z0-9+.-]*:|\/|\\)/i.test(source)) return "";
   const clean = source.replace(/^\.\//, "");
   if (clean.split("/").includes(".."))

@@ -49,6 +49,8 @@ export async function renderMarkdown(
   const html = await marked.parse(markdown);
   const element = document.createElement("div");
   element.innerHTML = DOMPurify.sanitize(html, {
+    ALLOWED_URI_REGEXP:
+      /^(?:(?:https?|mailto|tel|file):|[^a-z]|[a-z+.-]+(?:[^a-z+.-:]|$))/i,
     ADD_TAGS: ["math", "semantics", "annotation"],
     FORBID_TAGS: [
       "style",

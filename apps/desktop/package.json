@@ -1,7 +1,7 @@
 {
   "name": "@chomy/desktop",
   "productName": "Chomy",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "Local-first Markdown editor for macOS arm64 and Windows x64",
   "private": true,
   "author": "Chomy contributors",

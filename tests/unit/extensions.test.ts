@@ -45,6 +45,10 @@ describe("untrusted extensions", () => {
     expect(imageUrl("./assets/中文%20图.png", "session", false)).toBe(
       "chomy-asset://session/assets/中文%20图.png",
     );
+    expect(unsupportedReason("![local](file:///tmp/image.png)")).toBeNull();
+    expect(imageUrl("file:///tmp/image.png", "session", false)).toBe(
+      "chomy-asset://session/reference?ref=file%3A%2F%2F%2Ftmp%2Fimage.png",
+    );
     expect(imageUrl("javascript:alert(1)", "session", true)).toBe("");
     expect(imageUrl("https://example.com/img", "session", false)).toBe("");
     expect(imageUrl("https://example.com/img", "session", true)).toBe(
@@ -56,6 +60,12 @@ describe("untrusted extensions", () => {
   });
   it("validates endpoints and public URL/object keys", () => {
     expect(() => validateCloud(cloud)).not.toThrow();
+    expect(() =>
+      validateCloud({ ...cloud, provider: "qiniu", region: "z0" }),
+    ).not.toThrow();
+    expect(() =>
+      validateCloud({ ...cloud, provider: "qiniu", region: "invalid" }),
+    ).toThrow();
     expect(() =>
       validateCloud({ ...cloud, endpoint: "http://remote.example.com" }),
     ).toThrow();

@@ -266,14 +266,26 @@ async function execute(request: AppRequest): Promise<unknown> {
       clipboard.writeText(request.text);
       return undefined;
     case "openLink": {
-      if (!/^[a-z][a-z0-9+.-]*:/i.test(request.url)) {
+      if (
+        /^file:/i.test(request.url) ||
+        !/^[a-z][a-z0-9+.-]*:/i.test(request.url)
+      ) {
         const filename = documents.filePath;
-        if (!filename) throw new ChomyError("SAVE_FIRST", "请先保存文档。");
-        const base = path.dirname(filename);
-        const candidate = path.resolve(base, decodeURIComponent(request.url));
-        const real = await fs.realpath(candidate);
+        const granted = await documents.grantedAsset(request.url);
+        const absolute = /^file:/i.test(request.url);
+        if ((absolute || !filename) && !granted)
+          throw new ChomyError(
+            "ATTACHMENT_PATH",
+            "此附件尚未授权，请通过插入附件选择原文件。",
+          );
+        const base = filename ? path.dirname(filename) : "";
+        const real =
+          granted ??
+          (await fs.realpath(
+            path.resolve(base, decodeURIComponent(request.url)),
+          ));
         if (
-          (!real.startsWith(base + path.sep) &&
+          ((absolute || !real.startsWith(base + path.sep)) &&
             (await documents.grantedAsset(request.url)) !== real) ||
           ![
             ".pdf",
@@ -356,7 +368,11 @@ async function execute(request: AppRequest): Promise<unknown> {
     case "retryAsset":
       return assets.retry();
     case "assetDrop":
-      if (!documents.filePath && !(await documents.run(() => chooseSave())))
+      if (
+        preferences.preferences.assetMode !== "reference" &&
+        !documents.filePath &&
+        !(await documents.run(() => chooseSave()))
+      )
         throw new ChomyError(
           "SAVE_CANCELLED",
           "未选择文档位置，附件原文件仍保留。",
@@ -469,7 +485,11 @@ async function execute(request: AppRequest): Promise<unknown> {
       cloud.cancel();
       return undefined;
     case "asset": {
-      if (!documents.filePath && !(await documents.run(() => chooseSave())))
+      if (
+        preferences.preferences.assetMode !== "reference" &&
+        !documents.filePath &&
+        !(await documents.run(() => chooseSave()))
+      )
         return null;
       const result = await dialog.showOpenDialog(mainWindow!, {
         title: "插入图片或附件",

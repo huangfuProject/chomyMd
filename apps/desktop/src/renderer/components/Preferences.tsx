@@ -199,12 +199,13 @@ export function Preferences({
               }
             >
               <option value="local">复制到文档旁 assets 目录</option>
-              <option value="reference">引用原路径（移动原文件会断链）</option>
+              <option value="reference">源文件路径（移动原文件会断链）</option>
               <option value="cloud">保留本地副本并上传云端</option>
             </select>
           </label>
           <p className="hint">
-            文档需先保存。上传失败、取消或删除引用都不会删除本地附件或云端对象。
+            源文件路径无需先保存文档。复制到
+            assets、云端上传及粘贴截图需要先保存文档；上传失败或取消会保留本地副本。
           </p>
           <h3>云存储</h3>
           <label>
@@ -215,11 +216,19 @@ export function Preferences({
                 setConfig({
                   ...config,
                   provider: event.target.value as CloudConfig["provider"],
+                  region:
+                    event.target.value === "qiniu"
+                      ? "z0"
+                      : event.target.value === "aliyun"
+                        ? "oss-cn-hangzhou"
+                        : "us-east-1",
+                  endpoint: "",
                 })
               }
             >
               <option value="s3">S3-Compatible / MinIO</option>
               <option value="aliyun">阿里云 OSS</option>
+              <option value="qiniu">七牛云 Kodo</option>
             </select>
           </label>
           {(
@@ -235,25 +244,51 @@ export function Preferences({
                   prefix: "对象前缀",
                 }[key]
               }
-              <input
-                value={config[key]}
-                onChange={(event) =>
-                  setConfig({ ...config, [key]: event.target.value })
-                }
-                spellCheck={false}
-              />
+              {key === "region" && config.provider === "qiniu" ? (
+                <select
+                  value={config.region}
+                  onChange={(event) =>
+                    setConfig({ ...config, region: event.target.value })
+                  }
+                >
+                  <option value="z0">华东·浙江</option>
+                  <option value="cn-east-2">华东·浙江 2</option>
+                  <option value="z1">华北·河北</option>
+                  <option value="z2">华南·广东</option>
+                  <option value="na0">北美·洛杉矶</option>
+                  <option value="as0">亚太·新加坡</option>
+                  <option value="ap-southeast-2">亚太·河内</option>
+                  <option value="ap-southeast-3">亚太·胡志明</option>
+                </select>
+              ) : (
+                <input
+                  value={config[key]}
+                  onChange={(event) =>
+                    setConfig({ ...config, [key]: event.target.value })
+                  }
+                  spellCheck={false}
+                />
+              )}
             </label>
           ))}
-          <label className="check">
-            <input
-              type="checkbox"
-              checked={config.pathStyle}
-              onChange={(event) =>
-                setConfig({ ...config, pathStyle: event.target.checked })
-              }
-            />
-            S3 path-style
-          </label>
+          {config.provider === "qiniu" && (
+            <p className="hint">
+              填写空间名称、所属区域及 HTTPS 访问域名。Endpoint
+              可留空，自动使用该区域的上传域名；连接测试只读取文件列表。
+            </p>
+          )}
+          {config.provider === "s3" && (
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={config.pathStyle}
+                onChange={(event) =>
+                  setConfig({ ...config, pathStyle: event.target.checked })
+                }
+              />
+              S3 path-style
+            </label>
+          )}
           <label>
             Access Key
             <input

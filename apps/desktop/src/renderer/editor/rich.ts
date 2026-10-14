@@ -9,6 +9,7 @@ import {
 } from "@milkdown/kit/core";
 import {
   commonmark,
+  sanitizeLinkHref,
   toggleStrongCommand,
   toggleEmphasisCommand,
   toggleInlineCodeCommand,
@@ -74,6 +75,20 @@ export class RichAdapter implements EditorAdapter {
         ctx.update(editorViewOptionsCtx, (options) => ({
           ...options,
           attributes: { "aria-label": "Markdown 编辑器", spellcheck: "true" },
+          markViews: {
+            ...options.markViews,
+            link: (mark) => {
+              const dom = document.createElement("a");
+              const href = String(mark.attrs.href ?? "");
+              // Navigation is intercepted below; main validates explicit file grants.
+              dom.setAttribute(
+                "href",
+                /^file:\/\//i.test(href) ? href : sanitizeLinkHref(href),
+              );
+              if (mark.attrs.title) dom.title = String(mark.attrs.title);
+              return { dom, contentDOM: dom };
+            },
+          },
           dispatchTransaction: (tr) => {
             const view = ctx.get(editorViewCtx);
             if (holder.adapter?.destroyed || !view.state) return;

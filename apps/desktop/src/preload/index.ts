@@ -67,6 +67,7 @@ const api: ChomyApi = Object.freeze<ChomyApi>({
     ),
   removeTheme: (id) => invoke({ action: "removeTheme", id }, themes),
   themeCss: (id) => invoke({ action: "themeCss", id }, z.string()),
+  hasSourceFile: (file) => Boolean(webUtils.getPathForFile(file)),
   insertDroppedAsset: (file) =>
     invoke({ action: "assetDrop", path: webUtils.getPathForFile(file) }, asset),
   retryAsset: () => invoke({ action: "retryAsset" }, asset),

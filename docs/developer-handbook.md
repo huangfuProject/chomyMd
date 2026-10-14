@@ -1,6 +1,6 @@
 # Chomy 开发与主题制作手册
 
-适用版本：应用 1.0.13；IPC v1；主题协议 1.0.0。本文描述仓库中已实现的行为，面向接手维护、增加功能和制作主题的开发者。应用目前为内部测试版本，平台发行条件见文末。
+适用版本：应用 1.0.14；IPC v1；主题协议 1.0.0。本文描述仓库中已实现的行为，面向接手维护、增加功能和制作主题的开发者。应用目前为内部测试版本，平台发行条件见文末。
 
 ## 1. 快速开始
 
@@ -347,13 +347,19 @@ ZIP 最大 2 MiB，最多 100 个条目，声明解压总大小最多 10 MiB；J
 
 ## 8. 附件与云存储
 
-本地模式复制到文档相邻 assets，并插入相对链接；引用模式保留原位置并授权访问，跨卷路径建议改为复制；云模式先落地 assets，再上传并插入长期 HTTPS 地址。未保存文档先选择保存位置。导入上限 20 MiB，文件名使用唯一标识避免冲突。
+新配置默认选择源文件路径（reference）；用户已经保存的其他策略保持原选择。原文件通过选择器、拖入或剪贴板携带真实文件句柄明确授权，未保存文档无需保存即可插入图片和普通附件，使用经过 URL 编码的 `file:///…` 绝对路径；括号编码以避免破坏 Markdown。已保存文档同卷优先保留相对路径，跨卷使用绝对文件 URL。只有复制模式和云模式需要先保存文档，再写入相邻 assets；导入上限 20 MiB，复制文件名使用 UUID 避免冲突。
 
-引用授权持久化在 asset-grants.json，但目标符号链接变化不能扩大权限。撤走外部文件会导致图片失效；共享文档时优先复制模式。
+剪贴板截图只有二进制数据，没有可引用的源文件。当前仍需先保存文档，再写入 assets（云模式随后上传），即使插入方式选择 reference 也不虚构源路径。可考虑未来增加可配置的持久截图目录，以支持未保存文档直接粘贴；不应只写入系统临时目录，也不能在本文宣称此方案已经实现。Typora 的公开说明也要求将剪贴板图片数据保存到指定文件夹或服务器，然后插入路径/URL，见 [Images in Typora](https://support.typora.io/Images/)。
+
+引用授权持久化在 asset-grants.json：未保存文档按 session:文档ID 隔离，恢复沿用该 ID；首次保存及另存时迁移至文件路径键，绝对链接不需要改写。渲染器将 file URL 映射到 chomy-asset reference 协议，仅主进程明确授权且 realpath 一致的文件能够预览或打开，任意 file URL 不授予磁盘权限；目标符号链接变化不能扩大权限。撤走外部文件会导致图片失效；共享文档时优先复制模式。
 
 CloudConfig 包含 provider、bucket、region、endpoint、publicUrl、prefix、pathStyle。凭据用 Electron safeStorage 加密；系统不能提供加密时拒绝保存，不回退明文。publicUrl 是永久公共桶/CDN HTTPS 前缀，不能带凭据、query/hash；不将短期签名地址写入文档。远端 endpoint 要求 HTTPS，本机 MinIO 测试允许 localhost HTTP。
 
-对象 key 包含配置前缀、UTC 日期与 UUID。S3Provider 使用 HeadBucket/PutObject，AliyunProvider 使用 listV2/put；测试连接需要与这些调用匹配的权限。上传超时约 60 s，取消传播 AbortSignal，晚到成功不会反转取消状态。失败保留本地副本，支持直接重试。
+对象 key 包含配置前缀、UTC 日期与 UUID。S3Provider 使用 HeadBucket/PutObject，AliyunProvider 使用 listV2/put，QiniuProvider 使用只读签名 GET /list 连接测试及 multipart 表单上传；测试连接需要与这些调用匹配的权限。上传超时约 60 s，取消传播 AbortSignal，晚到成功不会反转取消状态。失败保留本地副本，支持直接重试。
+
+七牛云设置选择 qiniu，bucket 填空间名称，region 选择 z0、cn-east-2、z1、z2、na0、as0、ap-southeast-2 或 ap-southeast-3，publicUrl 填 HTTPS 访问域名。Endpoint 留空自动按区域选择 `https://up-<region>.qiniup.com`，覆盖值只用于上传；连接测试访问 `https://rsf-<region>.qiniuapi.com/list?bucket=…&limit=1`，需要列举权限。为协议测试保留本机 HTTP Endpoint 转发，不向真实服务发送测试凭据。生产 Endpoint 拒绝重定向以避免上传令牌外泄。
+
+上传策略限定 bucket:key、有效期 1 小时及 insertOnly，JSON 经保留填充的 URL-safe Base64 编码，再做 HMAC-SHA1 签名，令牌仅在主进程生成；multipart 包含 key、token、file。成功后用配置的公共域名及逐段编码 key 构建长期 URL。凭据保持 safeStorage 加密，不写入 Markdown。参考 [七牛上传凭证](https://developer.qiniu.com/kodo/1208/upload-token)、[表单上传](https://developer.qiniu.com/kodo/1312/upload)、[区域域名](https://developer.qiniu.com/kodo/1671/region-endpoint-fq)。
 
 进度提供 queued/uploading/succeeded/failed/canceled 与总字节数；没有可验证的逐字节回调时使用不定进度条，不显示虚构百分比。
 
@@ -414,7 +420,7 @@ Git 忽略依赖、构建产物、测试临时文件、秘密和本地工具配�
 
 CI 在 macOS arm64 与 Windows x64 执行检查、E2E、打包和打包版测试。CI 配置存在不等于远程执行通过；应保留实际运行记录和产物校验和。
 
-公开发行前还需要：Windows 10/11 实机安装与输入法/路径验收、真实 S3/MinIO/OSS 桶验证、Developer ID 签名与公证、Windows 签名与 SmartScreen、视觉批准、项目 LICENSE 与发布归属。当前内部包未签名，跨平台 Windows 构建只验证生成了 x64 产物。详细清单见 `docs/release/platform-checklist.md`。
+公开发行前还需要：Windows 10/11 实机安装与输入法/路径验收、真实 S3/MinIO/OSS/七牛云桶验证、Developer ID 签名与公证、Windows 签名与 SmartScreen、视觉批准、项目 LICENSE 与发布归属。当前内部包未签名，跨平台 Windows 构建只验证生成了 x64 产物。详细清单见 `docs/release/platform-checklist.md`。
 
 依赖声明见 `docs/release/dependency-licenses.md` 和随包 THIRD_PARTY_NOTICES.txt。项目自身许可证由拥有者确定，不由第三方声明推导。
 

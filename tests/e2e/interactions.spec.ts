@@ -62,6 +62,103 @@ test("heading and list input rules, table content preservation and source headin
     await fs.rm(directory, { recursive: true, force: true });
   }
 });
+
+test("default original paths insert in an untitled document without a save dialog and survive save/restart", async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "chomy-original-"));
+  const image = path.join(directory, "中文 (图).png");
+  const attachment = path.join(directory, "附件.txt");
+  const filename = path.join(directory, "document.md");
+  await fs.writeFile(
+    image,
+    Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aV8sAAAAASUVORK5CYII=",
+      "base64",
+    ),
+  );
+  await fs.writeFile(attachment, "original attachment");
+  let app = await launch(directory);
+  try {
+    let page = await app.firstWindow();
+    await expect(page.locator(".ProseMirror")).toBeVisible();
+    await dialogs(app, image);
+    await app.evaluate(({ dialog }) => {
+      dialog.showSaveDialog = async () => {
+        throw Error("Original references must not ask to save");
+      };
+    });
+    await page.locator(".ProseMirror").click();
+    await showTools(page);
+    await page.getByRole("button", { name: "附件", exact: true }).click();
+    await expect
+      .poll(async () =>
+        page
+          .getByRole("img", { name: "中文 (图).png" })
+          .evaluate((img: HTMLImageElement) => img.naturalWidth),
+      )
+      .toBe(1);
+    expect((await page.evaluate(() => window.chomy.status())).saved).toBe(
+      false,
+    );
+    await dialogs(app, attachment);
+    await app.evaluate(({ dialog }) => {
+      dialog.showSaveDialog = async () => {
+        throw Error("Original attachments must not ask to save");
+      };
+    });
+    await page.locator(".ProseMirror").click();
+    await page.getByRole("button", { name: "附件", exact: true }).click();
+    await expect(page.locator(".ProseMirror")).toContainText("附件.txt");
+    await app.evaluate(
+      ({ shell }, expected) => {
+        shell.openPath = async (actual) => {
+          if (actual !== expected) throw Error("Unexpected attachment path");
+          return "";
+        };
+      },
+      await fs.realpath(attachment),
+    );
+    const href = await page
+      .getByRole("link", { name: "附件.txt" })
+      .getAttribute("href");
+    expect(href).toMatch(/^file:/);
+    await page.evaluate((url) => window.chomy.openLink(url!), href);
+    await expect(page.getByRole("alert")).toHaveCount(0);
+    await clickAction(page, "阅读");
+    await expect
+      .poll(async () =>
+        page
+          .locator(".reading-preview img")
+          .evaluate((img: HTMLImageElement) => img.naturalWidth),
+      )
+      .toBe(1);
+    await dialogs(app, filename);
+    await clickAction(page, "保存");
+    await expect
+      .poll(async () => fs.readFile(filename, "utf8").catch(() => ""))
+      .toContain("file:///");
+    expect(await fs.readdir(directory)).not.toContain("assets");
+    await stop(app);
+    app = await launch(directory);
+    page = await app.firstWindow();
+    await dialogs(app, filename);
+    await clickAction(page, "打开");
+    await expect
+      .poll(async () =>
+        page
+          .getByRole("img", { name: "中文 (图).png" })
+          .evaluate((img: HTMLImageElement) => img.naturalWidth),
+      )
+      .toBe(1);
+    await clickAction(page, "偏好设置");
+    await expect(page.getByLabel("插入方式")).toHaveValue("reference");
+    await page.getByLabel("存储类型").selectOption("qiniu");
+    await expect(page.getByLabel("Region")).toHaveValue("z0");
+    await expect(page.getByLabel("S3 path-style")).toHaveCount(0);
+  } finally {
+    await stop(app);
+    await fs.rm(directory, { recursive: true, force: true });
+  }
+});
 test("reference attachment displays only after explicit selection and survives restart", async () => {
   const directory = await fs.mkdtemp(
     path.join(os.tmpdir(), "chomy-reference-"),

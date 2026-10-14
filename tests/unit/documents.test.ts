@@ -22,6 +22,38 @@ afterEach(async () => {
     await fs.rm(directory, { recursive: true, force: true });
 });
 describe("document persistence and recovery", () => {
+  it("authorizes original paths before save, preserves them through recovery and first save", async () => {
+    const { directory, service } = await fixture();
+    const image = path.join(directory, "中文 (图).png");
+    await fs.writeFile(image, "image bytes");
+    const source = await service.referenceAsset(image);
+    expect(source).toMatch(/^file:\/\//);
+    expect(source).toContain("%28");
+    const url = (docs: Documents) =>
+      `chomy-asset://${docs.snapshot.id}/reference?ref=${encodeURIComponent(source)}`;
+    expect(service.filePath).toBeNull();
+    expect(await service.resolveAsset(url(service))).toBe(
+      await fs.realpath(image),
+    );
+    expect(await service.grantedAsset(source + ".unselected")).toBeNull();
+    await service.update(service.snapshot.id, `![image](${source})`, 1);
+    await service.persistRecovery();
+    const restored = new Documents(path.join(directory, "data"));
+    await restored.initialize();
+    await restored.restore(service.snapshot.id);
+    expect(await restored.resolveAsset(url(restored))).toBe(
+      await fs.realpath(image),
+    );
+    const filename = path.join(directory, "note.md");
+    await restored.save(filename);
+    const fresh = new Documents(path.join(directory, "data"));
+    await fresh.initialize();
+    await fresh.open(filename);
+    expect(await fresh.resolveAsset(url(fresh))).toBe(await fs.realpath(image));
+    expect(await fs.readFile(filename, "utf8")).toContain(source);
+    expect(await fs.readdir(directory)).not.toContain("assets");
+  });
+
   it("does not rewrite untouched BOM/CRLF bytes; preserves encoding on edits", async () => {
     const { directory, service } = await fixture();
     const filename = path.join(directory, "中文 空格.md");

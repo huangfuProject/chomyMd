@@ -3,7 +3,7 @@ import path from "node:path";
 import { safeStorage } from "electron";
 import { S3Client } from "@aws-sdk/client-s3";
 import OSS from "ali-oss";
-import { S3Provider, AliyunProvider } from "./providers";
+import { S3Provider, AliyunProvider, QiniuProvider } from "./providers";
 import { z } from "zod";
 import {
   ChomyError,
@@ -47,6 +47,8 @@ export class CloudService {
         ),
       ),
     );
+    if (config.provider === "qiniu")
+      return new QiniuProvider(config, credentials);
     return config.provider === "s3"
       ? new S3Provider(
           config,

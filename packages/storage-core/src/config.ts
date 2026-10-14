@@ -8,7 +8,19 @@ export interface StorageProvider {
     signal: AbortSignal,
   ): Promise<string>;
 }
+export const qiniuRegions = [
+  "z0",
+  "cn-east-2",
+  "z1",
+  "z2",
+  "na0",
+  "as0",
+  "ap-southeast-2",
+  "ap-southeast-3",
+];
 export function validateCloud(config: CloudConfig) {
+  if (config.provider === "qiniu" && !qiniuRegions.includes(config.region))
+    throw new ChomyError("CLOUD_REGION", "请选择七牛云空间所属区域。");
   if (
     config.prefix.includes("..") ||
     Array.from(config.prefix).some((char) => char.charCodeAt(0) < 32) ||

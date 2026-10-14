@@ -107,7 +107,27 @@ test("minimal chrome keeps sidebar, menus and document controls usable", async (
       .getByRole("button", { name: "显示当前文件夹文件树", exact: true })
       .click();
     await expect(page.locator(".file-list")).toContainText("sibling.md");
-    await expect(page.locator(".file-list")).toContainText("child.md");
+    const nested = page
+      .locator(".file-list button")
+      .filter({ hasText: "nested" });
+    await expect(nested).toHaveAttribute("aria-expanded", "false");
+    await expect(
+      page.getByRole("button", { name: "child.md", exact: true }),
+    ).toHaveCount(0);
+    await nested.click();
+    await expect(nested).toHaveAttribute("aria-expanded", "true");
+    await expect(
+      page.getByRole("button", { name: "child.md", exact: true }),
+    ).toBeVisible();
+    await page
+      .getByRole("button", { name: "显示当前文件夹文件树", exact: true })
+      .click();
+    await expect(nested).toHaveAttribute("aria-expanded", "true");
+    await nested.click();
+    await expect(nested).toHaveAttribute("aria-expanded", "false");
+    await expect(
+      page.getByRole("button", { name: "child.md", exact: true }),
+    ).toHaveCount(0);
     await expect(page.locator(".file-list")).toContainText("empty");
     await expect(page.locator(".file-list")).toContainText("photo.png");
     await expect(

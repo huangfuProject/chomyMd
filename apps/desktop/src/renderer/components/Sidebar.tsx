@@ -35,7 +35,7 @@ function FileTree({
   onOpen: (entry: FileEntry) => void;
 }) {
   const tree = useMemo(() => buildTree(entries), [entries]);
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState("");
   const render = (node: TreeNode, depth: number): React.ReactNode =>
     Array.from(node.children.values())
@@ -68,9 +68,9 @@ function FileTree({
           <div key={child.key}>
             <button
               style={{ paddingLeft: 12 + depth * 14 }}
-              aria-expanded={!collapsed.has(child.key)}
+              aria-expanded={expanded.has(child.key)}
               onClick={() =>
-                setCollapsed((previous) => {
+                setExpanded((previous) => {
                   const next = new Set(previous);
                   if (next.has(child.key)) next.delete(child.key);
                   else next.add(child.key);
@@ -78,9 +78,9 @@ function FileTree({
                 })
               }
             >
-              {collapsed.has(child.key) ? "▸" : "▾"} {child.name}
+              {expanded.has(child.key) ? "▾" : "▸"} {child.name}
             </button>
-            {!collapsed.has(child.key) && render(child, depth + 1)}
+            {expanded.has(child.key) && render(child, depth + 1)}
           </div>
         ),
       );
@@ -222,6 +222,7 @@ export function Sidebar({
               切换目录…
             </button>
             <FileTree
+              key={files.find((entry) => entry.relative === ".")?.id}
               entries={files.filter(
                 (entry) => entry.relative === "." || matches(entry.relative),
               )}

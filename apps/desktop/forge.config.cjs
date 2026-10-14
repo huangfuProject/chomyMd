@@ -1,5 +1,9 @@
 const path = require("node:path");
 const fs = require("node:fs/promises");
+const {
+  ignoreRuntimeFile,
+  trimLocales,
+} = require("../../scripts/lib/package-policy.cjs");
 const portableCross = process.env.CHOMY_PORTABLE_CROSS === "1";
 const signing = process.env.APPLE_SIGNING_IDENTITY;
 const notarize =
@@ -27,12 +31,8 @@ module.exports = {
     executableName: "Chomy",
     appBundleId: "io.chomy.editor",
     ...(!portableCross ? { icon: path.join(__dirname, "assets", "icon") } : {}),
-    ignore: [
-      /^\/node_modules(?:\/|$)/,
-      /^\/src(?:\/|$)/,
-      /^\/out(?:\/|$)/,
-      /^\/forge\.config\.cjs$/,
-    ],
+    ignore: ignoreRuntimeFile,
+    afterExtract: [trimLocales],
     ...(signing
       ? {
           osxSign: {

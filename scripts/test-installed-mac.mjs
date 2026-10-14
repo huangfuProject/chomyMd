@@ -42,8 +42,13 @@ try {
   mounted = true;
   await copyMacBundle(path.join(mount, "Chomy.app"), installed);
   const links = await assertPortableMacBundle(installed);
-  await fs.rename(original, hidden);
-  moved = true;
+  try {
+    await fs.rename(original, hidden);
+    moved = true;
+  } catch (error) {
+    // The development build can already be archived in its verified release ZIP.
+    if (error.code !== "ENOENT") throw error;
+  }
   console.log(
     `Testing DMG installation with ${links} relative links and the original build unavailable.`,
   );

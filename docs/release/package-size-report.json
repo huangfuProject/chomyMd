@@ -1,0 +1,33 @@
+{
+  "date": "2026-10-14",
+  "units": "bytes; MB tables use 1,000,000 bytes",
+  "before": {
+    "version": "1.0.16",
+    "macAppLogicalBytes": 331052913,
+    "macAppAllocatedBytes": 331956224,
+    "macAsarBytes": 30410025,
+    "macDmgBytes": 139233665,
+    "macZipBytes": 136034010,
+    "windowsZipBytes": 166802454
+  },
+  "after": {
+    "version": "1.0.17",
+    "macAppLogicalBytes": 272217685,
+    "macAppAllocatedBytes": 272371712,
+    "macAsarBytes": 19685638,
+    "macDmgBytes": 94159963,
+    "macZipBytes": 121576348,
+    "windowsZipBytes": 152443863,
+    "macBuildAppAllocatedBytes": 272359424
+  },
+  "reductionPercent": {
+    "macAppLogicalBytes": 17.77,
+    "macAppAllocatedBytes": 17.95,
+    "macAsarBytes": 35.27,
+    "macDmgBytes": 32.37,
+    "macZipBytes": 10.63,
+    "windowsZipBytes": 8.61
+  },
+  "measurement": "Regular files only; framework symlinks are not traversed twice. macAppAllocatedBytes measures the /Applications installation; macBuildAppAllocatedBytes records the build directory, because filesystem allocation can differ after copying.",
+  "windowsRuntimeVerified": false
+}

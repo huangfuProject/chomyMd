@@ -48,4 +48,8 @@ pnpm package:win
 - [开发者手册](docs/developer-handbook.md)：架构、实现、扩展和完整主题制作流程。
 - [内部版验证记录](docs/release/validation-report.md)：测试、性能、产物及尚需验收的环境。
 
-未决定项目开源许可证，不擅自添加 LICENSE。参考主题、字体和图标没有复制或分发。
+## 许可证
+
+Copyright 2026 Chomy contributors.
+
+Chomy 原创代码与文档采用 [Apache License 2.0](LICENSE)，包元数据使用 SPDX 标识 `Apache-2.0`。第三方依赖及随附资源仍遵循各自许可证，见 [依赖许可证清单](docs/release/dependency-licenses.md) 和随包 THIRD_PARTY_NOTICES.txt。参考主题、字体和图标没有复制或分发。

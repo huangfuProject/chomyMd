@@ -1,6 +1,6 @@
 Chomy third-party dependency notices
 Generated from the installed lockfile packages, including build and test tools.
-The Chomy project license has not been selected. See docs/release/dependency-licenses.md.
+Chomy original code and documentation are licensed under Apache-2.0. See LICENSE.txt in the packaged dist directory. Third-party dependencies retain their respective licenses.
 
 ========================================================================
 @alcalzone/ansi-tokenize 0.3.1 — MIT

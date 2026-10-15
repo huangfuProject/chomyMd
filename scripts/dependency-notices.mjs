@@ -43,7 +43,7 @@ records.sort((a, b) => a.name.localeCompare(b.name));
 const notices = [
   "Chomy third-party dependency notices",
   "Generated from the installed lockfile packages, including build and test tools.",
-  "The Chomy project license has not been selected. See docs/release/dependency-licenses.md.",
+  "Chomy original code and documentation are licensed under Apache-2.0. See LICENSE.txt in the packaged dist directory. Third-party dependencies retain their respective licenses.",
   ...records.map(
     (record) =>
       `\n${"=".repeat(72)}\n${record.name} ${record.versions.join(", ")} — ${record.license}\n\n${record.text || "License text not present in this installed package. Consult its upstream distribution before public release."}`,

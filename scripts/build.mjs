@@ -1,6 +1,6 @@
 import { build as bundle } from "esbuild";
 import { build as vite } from "vite";
-import { rm } from "node:fs/promises";
+import { rm, copyFile } from "node:fs/promises";
 import path from "node:path";
 const root = path.resolve(import.meta.dirname, "..");
 const desktop = path.join(root, "apps/desktop");
@@ -36,3 +36,8 @@ await vite({
   base: "./",
   build: { outDir: path.join(desktop, "dist/renderer"), emptyOutDir: true },
 });
+
+await copyFile(
+  path.join(root, "LICENSE"),
+  path.join(desktop, "dist/LICENSE.txt"),
+);

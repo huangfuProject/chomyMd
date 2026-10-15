@@ -426,7 +426,7 @@ CI 在 macOS arm64 与 Windows x64 执行检查、E2E、打包和打包版测试
 
 公开发行前还需要：Windows 10/11 实机安装与输入法/路径验收、真实 S3/MinIO/OSS/七牛云桶验证、Developer ID 签名与公证、Windows 签名与 SmartScreen、视觉批准、项目 LICENSE 与发布归属。当前内部包未签名，跨平台 Windows 构建只验证生成了 x64 产物。详细清单见 `docs/release/platform-checklist.md`。
 
-依赖声明见 `docs/release/dependency-licenses.md` 和随包 THIRD_PARTY_NOTICES.txt。项目自身许可证由拥有者确定，不由第三方声明推导。
+依赖声明见 `docs/release/dependency-licenses.md` 和随包 THIRD_PARTY_NOTICES.txt。项目原创代码与文档经拥有者指定采用 Apache License 2.0，完整文本见根目录 LICENSE，包元数据为 Apache-2.0。构建将原文复制到 dist/LICENSE.txt，随应用一起打包；第三方依赖许可证不因此改变。
 
 ### Windows 打包依赖准备
 
